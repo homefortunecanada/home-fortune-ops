@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Fortune Windows &amp; Doors — Operations</title>
+<style>
+  :root{
+    --navy:#0f2a4a; --navy-dark:#0a1d33; --blue:#1f5fa8; --blue-light:#e8f1fb;
+    --accent:#c8952a; --green:#1f8a4c; --red:#c0392b; --amber:#b8860b;
+    --gray-50:#f7f8fa; --gray-100:#eef1f5; --gray-200:#dde2e8; --gray-400:#96a1ad;
+    --gray-600:#5b6673; --gray-800:#2b323b; --white:#fff; --radius:8px;
+    --shadow:0 1px 3px rgba(15,42,74,.10),0 1px 2px rgba(15,42,74,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--gray-50);color:var(--gray-800);font-size:14.5px;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:14px;}
+  a{color:var(--blue);}
+  .hidden{display:none !important;}
+  /* ---- Login ---- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy),var(--navy-dark));}
+  .loginCard{background:var(--white);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:40px 44px;width:380px;max-width:92vw;}
+  .loginCard h1{font-size:19px;margin:0 0 4px;color:var(--navy);}
+  .loginCard .sub{color:var(--gray-600);font-size:13px;margin-bottom:22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--gray-600);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em;}
+  .field input,.field select,.field textarea{width:100%;padding:10px 11px;border:1px solid var(--gray-200);border-radius:6px;background:var(--white);color:var(--gray-800);}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light);}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:6px;padding:9px 16px;font-size:13.5px;font-weight:600;background:var(--blue);color:#fff;transition:.15s;}
+  .btn:hover{background:var(--navy);}
+  .btn.secondary{background:var(--white);color:var(--blue);border-color:var(--gray-200);}
+  .btn.secondary:hover{background:var(--gray-100);}
+  .btn.danger{background:var(--red);}
+  .btn.danger:hover{background:#96261b;}
+  .btn.ghost{background:transparent;color:var(--blue);border:none;padding:6px 8px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.block{width:100%;justify-content:center;}
+  .demoNote{margin-top:18px;font-size:11.5px;color:var(--gray-400);line-height:1.5;}
+  /* ---- App shell ---- */
+  #appShell{display:none;min-height:100vh;}
+  #appShell.active{display:flex;}
+  #sidebar{width:222px;background:var(--navy);color:#fff;flex-shrink:0;display:flex;flex-direction:column;}
+  #sidebar .brand{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1);}
+  #sidebar .brand .cn{font-size:13px;color:#cdd8e6;}
+  #sidebar .brand .en{font-size:14.5px;font-weight:700;letter-spacing:.02em;}
+  #sidebar nav{flex:1;padding:10px 0;overflow-y:auto;}
+  #sidebar nav a{display:flex;align-items:center;gap:9px;padding:10px 18px;color:#c9d5e3;text-decoration:none;font-size:13.5px;font-weight:500;border-left:3px solid transparent;}
+  #sidebar nav a:hover{background:rgba(255,255,255,.06);color:#fff;}
+  #sidebar nav a.active{background:rgba(255,255,255,.09);color:#fff;border-left-color:var(--accent);}
+  #sidebar .userbox{padding:14px 18px;border-top:1px solid rgba(255,255,255,.1);font-size:12.5px;color:#cdd8e6;}
+  #sidebar .userbox .role{color:var(--accent);font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;}
+  #main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  #topbar{background:#fff;border-bottom:1px solid var(--gray-200);padding:10px 22px;display:flex;align-items:center;gap:14px;}
+  #topbar .search{flex:1;max-width:420px;position:relative;}
+  #topbar .search input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--gray-200);border-radius:20px;background:var(--gray-50);}
+  #topbar .search .icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:13px;}
+  #searchResults{position:absolute;top:38px;left:0;right:0;background:#fff;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow);max-height:340px;overflow-y:auto;z-index:50;}
+  #searchResults .r{padding:9px 12px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:13px;}
+  #searchResults .r:hover{background:var(--blue-light);}
+  #searchResults .r .meta{color:var(--gray-400);font-size:11.5px;}
+  .langToggle{display:flex;border:1px solid var(--gray-200);border-radius:20px;overflow:hidden;}
+  .langToggle button{border:none;background:#fff;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--gray-600);}
+  .langToggle button.active{background:var(--blue);color:#fff;}
+  #content{flex:1;padding:22px 26px;overflow-y:auto;}
+  .pageHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .pageHead h2{margin:0;font-size:20px;color:var(--navy);}
+  .pageHead .desc{color:var(--gray-600);font-size:12.5px;margin-top:2px;}
+  .card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px;}
+  .grid{display:grid;gap:14px;}
+  .grid.cols-2{grid-template-columns:1fr 1fr;}
+  .grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.grid.cols-4{grid-template-columns:repeat(2,1fr);}.grid.cols-3{grid-template-columns:1fr 1fr;}.grid.cols-2{grid-template-columns:1fr;}}
+  .statCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .statCard{background:#fff;border:1px solid var(--gray-200);border-left:4px solid var(--blue);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow);}
+  .statCard .n{font-size:24px;font-weight:800;color:var(--navy);}
+  .statCard .l{font-size:11.5px;color:var(--gray-600);font-weight:600;margin-top:2px;}
+  .statCard.warn{border-left-color:var(--red);}
+  .statCard.ok{border-left-color:var(--green);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  table th{text-align:left;background:var(--gray-100);color:var(--gray-600);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:9px 10px;font-weight:700;border-bottom:1px solid var(--gray-200);}
+  table td{padding:9px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+  table tr:hover td{background:var(--blue-light);}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;background:var(--gray-100);color:var(--gray-600);white-space:nowrap;}
+  .badge.new{background:#e8f1fb;color:var(--blue);}
+  .badge.progress{background:#fff4e0;color:var(--amber);}
+  .badge.done{background:#e5f6ea;color:var(--green);}
+  .badge.hold{background:#fdeaea;color:var(--red);}
+  .badge.factory{background:#f1e9fb;color:#6b3fa0;}
+  .rowActions a,.rowActions button{margin-right:6px;}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--gray-200);border-radius:6px;background:#fff;}
+  .tag{display:inline-block;background:var(--gray-100);border-radius:5px;padding:2px 7px;font-size:11px;color:var(--gray-600);margin-right:4px;}
+  .banner{padding:11px 14px;border-radius:7px;font-size:13px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;}
+  .banner.warn{background:#fff8e6;color:#8a6300;border:1px solid #f2dd9c;}
+  .banner.info{background:var(--blue-light);color:var(--navy);border:1px solid #c3d9f0;}
+  .banner.error{background:#fdeaea;color:var(--red);border:1px solid #f3c6c1;}
+  .banner.ok{background:#e5f6ea;color:var(--green);border:1px solid #b9e4c6;}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--gray-200);margin-bottom:16px;}
+  .tabs button{background:none;border:none;padding:9px 15px;font-size:13px;font-weight:600;color:var(--gray-600);border-bottom:2px solid transparent;}
+  .tabs button.active{color:var(--blue);border-bottom-color:var(--blue);}
+  .modalOverlay{position:fixed;inset:0;background:rgba(15,29,51,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:40px 16px;}
+  .modalOverlay.active{display:flex;}
+  .modal{background:#fff;border-radius:12px;width:640px;max-width:96vw;box-shadow:0 30px 70px rgba(0,0,0,.35);}
+  .modal.wide{width:820px;}
+  .modal .mHead{padding:16px 22px;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center;}
+  .modal .mHead h3{margin:0;font-size:16.5px;color:var(--navy);}
+  .modal .mBody{padding:20px 22px;max-height:70vh;overflow-y:auto;}
+  .modal .mFoot{padding:14px 22px;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end;gap:10px;}
+  .closeX{background:none;border:none;font-size:20px;color:var(--gray-400);line-height:1;}
+  fieldset{border:1px solid var(--gray-200);border-radius:8px;padding:12px 14px 14px;margin:0 0 14px;}
+  legend{font-size:11.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.03em;padding:0 6px;}
+  .itemCard{border:1px solid var(--gray-200);border-radius:8px;padding:14px 16px;margin-bottom:12px;}
+  .itemCard .itemHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .itemCard .itemHead h4{margin:0;font-size:14.5px;color:var(--navy);}
+  .diagram{display:flex;align-items:center;justify-content:center;background:var(--gray-50);border:1px dashed var(--gray-200);border-radius:6px;padding:8px;}
+  .calcTable td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .lockBadge{font-size:11px;color:var(--green);font-weight:700;}
+  .small{font-size:11.5px;color:var(--gray-600);}
+  .flexRow{display:flex;gap:10px;align-items:center;}
+  .footNote{font-size:11px;color:var(--gray-400);margin-top:22px;line-height:1.6;border-top:1px solid var(--gray-200);padding-top:12px;}
+  .calTable{table-layout:fixed;}
+  .calTable th{text-align:center;}
+  .calCell{height:78px;vertical-align:top;padding:4px 6px;border:1px solid var(--gray-100);}
+  .calCell.empty{background:var(--gray-50);}
+  .calCell.today{background:var(--blue-light);}
+  .calDayNum{font-size:12px;font-weight:700;color:var(--gray-600);}
+  .calDots{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+  .calDot{width:9px;height:9px;border-radius:50%;cursor:pointer;flex-shrink:0;}
+  .calDot.order{background:var(--blue);}
+  .calDot.due{background:var(--amber);}
+  .calLegendDot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;vertical-align:middle;}
+  .calLegendDot.order{background:var(--blue);}
+  .calLegendDot.due{background:var(--amber);}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:5px;}
+  /* Print */
+  @media print{
+    #sidebar,#topbar,.noPrint{display:none !important;}
+    #main,#content{padding:0;margin:0;overflow:visible;}
+    body{background:#fff;}
+    .printSheet{display:block !important;}
+  }
+  .printSheet{display:none;}
+  .printSheet.showing{display:block;}
+  .fsheet{max-width:820px;margin:0 auto;background:#fff;border:1px solid #ccc;padding:26px 30px;}
+  .fsheet h2{color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:8px;}
+  .fsheet table{margin-top:8px;}
+  .fsheet table th,.fsheet table td{border:1px solid #ccc;}
+  .fsheet .metaGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 22px;font-size:12.5px;margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="loginCard">
+    <h1>家福门窗 Home Fortune</h1>
+    <div class="sub">运营与窗料计算系统 / Operations &amp; Window Calculation System</div>
+    <div id="loginError"></div>
+    <form id="loginForm" onsubmit="return false;">
+      <div class="field">
+        <label>邮箱 / Email</label>
+        <input id="loginEmail" type="email" autocomplete="username" placeholder="you@homefortunewindows.com">
+      </div>
+      <div class="field">
+        <label>密码 / Password</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn block" id="loginBtn" type="submit">登录 / Sign in</button>
+    </form>
+    <div class="demoNote">这是家福门窗的真实运营系统，连接到实时数据库。仅限授权员工登录。<br><br>This is Home Fortune's live operations system, connected to a real database. Access is restricted to authorized employees — accounts are created by an administrator.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <div id="sidebar">
+    <div class="brand">
+      <div class="cn">家福门窗</div>
+      <div class="en">HOME FORTUNE</div>
+    </div>
+    <nav id="navLinks"></nav>
+    <div class="userbox">
+      <div class="role" id="userRoleLabel"></div>
+      <div id="userNameLabel"></div>
+      <a href="#" class="small" onclick="logout();return false;" data-i18n="nav.signout">Sign out</a>
+    </div>
+  </div>
+  <div id="main">
+    <div id="topbar" class="noPrint">
+      <div class="search">
+        <span class="icon">🔍</span>
+        <input id="globalSearch" placeholder="Search clients, phone, email, order #..." oninput="onGlobalSearch(this.value)">
+        <div id="searchResults" style="display:none;"></div>
+      </div>
+      <div class="langToggle">
+        <button id="langBtnEn" onclick="setLang('en')">EN</button>
+        <button id="langBtnZh" onclick="setLang('zh')">中文</button>
+      </div>
+    </div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- Generic modal -->
+<div class="modalOverlay noPrint" id="modalOverlay">
+  <div class="modal" id="modalBox">
+    <div class="mHead"><h3 id="modalTitle"></h3><button class="closeX" onclick="closeModal()">✕</button></div>
+    <div class="mBody" id="modalBody"></div>
+    <div class="mFoot" id="modalFoot"></div>
+  </div>
+</div>
+
+<div class="printSheet" id="printSheet"></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
