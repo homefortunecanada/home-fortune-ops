@@ -692,7 +692,9 @@ function renderQuoteSummary(o){
   const discountCents = Math.round(live.subtotalCents * (q.discountPct||0)/100);
   const taxableCents = live.subtotalCents - discountCents;
   const taxCents = Math.round(taxableCents * (q.taxPct||0)/100);
-  const totalCents = taxableCents + taxCents;
+  const calculatedTotalCents = taxableCents + taxCents;
+  const hasOverride = q.manualTotalCents!=null;
+  const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
 
   const rows = live.results.map(r=> r.q.ok
     ? `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))} (${r.item.width}×${r.item.height}mm × ${r.item.quantity})</td><td class="num">$${C.fmtCents(r.q.unitCents)}</td><td class="num">$${C.fmtCents(r.q.lineTotalCents)}</td></tr>`
@@ -736,6 +738,9 @@ function renderQuoteSummary(o){
       <div class="field" style="margin:0;"><label>${t('quote.taxPctLabel')}</label>
         <input type="number" min="0" max="100" step="0.1" value="${q.taxPct||0}" ${locked?'disabled':''} onchange="updateQuoteRates('${o.id}','taxPct',this.value)"></div>
     </div>
+    <div class="field" style="margin-top:4px;"><label>${t('quote.manualOverrideLabel')}</label>
+      <input type="number" min="0" step="0.01" placeholder="${C.fmtCents(calculatedTotalCents)}" value="${hasOverride?C.fmtCents(q.manualTotalCents):''}" ${locked?'disabled':''} onchange="updateManualTotal('${o.id}',this.value)"></div>
+    ${hasOverride ? `<div class="small" style="margin-top:4px;color:var(--amber);">⚠ ${tf('quote.manualOverrideNote',{calc:C.fmtCents(calculatedTotalCents)})}</div>` : ''}
     <div style="text-align:right;margin-top:8px;font-size:16px;color:var(--navy);font-weight:800;">${t('quote.grandTotal')}: $${C.fmtCents(totalCents)}</div>
     <div class="small" style="margin-top:4px;">${t('quote.sampleNote')}</div>
     <div class="noPrint" style="margin-top:12px;">${actionsHtml}</div>
@@ -747,6 +752,13 @@ async function updateQuoteRates(orderId, field, value){
     route('order-detail', orderId);
   }catch(err){ alert(err.message); }
 }
+async function updateManualTotal(orderId, value){
+  try{
+    const trimmed = String(value).trim();
+    await D.updateManualTotal(orderId, trimmed==='' ? null : Number(trimmed));
+    route('order-detail', orderId);
+  }catch(err){ alert(err.message); }
+}
 async function sendQuoteToClient(orderId){
   try{
     const o = currentOrder;
@@ -755,15 +767,19 @@ async function sendQuoteToClient(orderId){
     const discountCents = Math.round(live.subtotalCents * (q.discountPct||0)/100);
     const taxableCents = live.subtotalCents - discountCents;
     const taxCents = Math.round(taxableCents * (q.taxPct||0)/100);
-    const totalCents = taxableCents + taxCents;
+    const calculatedTotalCents = taxableCents + taxCents;
+    const hasOverride = q.manualTotalCents!=null;
+    const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
     const snapshot = {
       subtotalCents: live.subtotalCents, discountPct:q.discountPct||0, taxPct:q.taxPct||0,
-      discountCents, taxCents, totalCents, generatedAt: new Date().toISOString(),
+      discountCents, taxCents, calculatedTotalCents, manualTotalCents: hasOverride?q.manualTotalCents:null, totalCents,
+      generatedAt: new Date().toISOString(),
       items: live.results.map(r=>({itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height,
         quantity:r.item.quantity, ok:r.q.ok, unitCents:r.q.ok?r.q.unitCents:null, lineTotalCents:r.q.ok?r.q.lineTotalCents:null}))
     };
     const nextStatus = ['New Inquiry','Measurement Required','Measurements Completed','Quote In Progress'].includes(o.status) ? 'Customer Approval Required' : null;
-    await D.sendQuoteToClient(orderId, snapshot, q.discountPct||0, q.taxPct||0, nextStatus);
+    const manualTotalDollars = hasOverride ? q.manualTotalCents/100 : null;
+    await D.sendQuoteToClient(orderId, snapshot, q.discountPct||0, q.taxPct||0, manualTotalDollars, nextStatus);
     route('order-detail', orderId);
   }catch(err){ alert(err.message); }
 }
@@ -1128,7 +1144,7 @@ Object.assign(window, {
   openOrderModal, saveOrder, applyOrderFilters, calPrevMonth, calNextMonth, calGoToday,
   openItemModal, saveItem, refreshDiagramPreview, duplicateItem, runCalculation, approveCalc, reopenCalc,
   switchOrderTab,
-  updateQuoteRates, sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
+  updateQuoteRates, updateManualTotal, sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
   openFactorySheet, generateFactorySheet, printFactorySheet, markSentToFactory,
   switchFormulaAdminTab, openFormulaModal, testFormula, saveFormula,
   openProductPricingModal, testProductPricing, saveProductPricing, openModifiersModal, saveModifiers,

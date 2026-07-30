@@ -127,6 +127,7 @@ export const I18N = {
     'quote.excludedItems':'item(s) need a manual quote and are excluded from the auto-total','quote.manualQuoteRequired':'Manual quote required',
     'quote.sentOn':'Sent','quote.approvedOn':'Approved','quote.by':'by','quote.discountPctLabel':'Discount %','quote.taxPctLabel':'Tax %',
     'quote.sampleNote':'Pricing shown uses SAMPLE placeholder rates — not real Home Fortune pricing yet. See Formula Admin.',
+    'quote.manualOverrideLabel':'Override final price ($, optional)','quote.manualOverrideNote':'Manually set — replaces the calculated total below (which was ${calc}).',
     'quote.reopenConfirm':'Reopen this approved quote for editing? Any approved material calculations on this order will be reset to draft and will need to be recalculated once the quote is re-approved. This should only be done by an authorized administrator.',
 
     'formulas.tabMaterials':'Material Formulas','formulas.tabPricing':'Quote Pricing',
@@ -271,6 +272,7 @@ export const I18N = {
     'quote.excludedItems':'个项目需要手动报价，已从自动总额中排除','quote.manualQuoteRequired':'需要手动报价',
     'quote.sentOn':'发送时间','quote.approvedOn':'批准时间','quote.by':'由','quote.discountPctLabel':'折扣 %','quote.taxPctLabel':'税率 %',
     'quote.sampleNote':'所示价格为示例占位费率 — 并非家福门窗的真实价格。详见公式管理。',
+    'quote.manualOverrideLabel':'手动设置最终价格 ($，可选)','quote.manualOverrideNote':'已手动设置 — 将替代下方计算总额（原计算值为 ${calc}）。',
     'quote.reopenConfirm':'确定要重新打开这个已批准的报价以进行编辑吗？此订单上所有已批准的物料计算都将被重置为草稿状态，并需要在报价重新批准后重新计算。此操作应仅由授权管理员执行。',
 
     'formulas.tabMaterials':'物料计算公式','formulas.tabPricing':'报价定价',
