@@ -93,7 +93,13 @@ export const I18N = {
     'common.name':'Full name','common.phone':'Phone','common.email':'Email','common.address':'Address',
     'common.status':'Status','common.notes':'Notes','common.close':'Close','common.approve':'Approve','common.back':'Back',
     'common.print':'Print / Save as PDF','common.calculate':'Calculate','common.confirm':'Confirm','common.na':'—',
-    'common.loading':'Loading…',
+    'common.loading':'Loading…','common.archive':'Archive','common.restore':'Restore','common.archived':'Archived',
+    'common.showArchived':'Show archived',
+
+    'confirm.archiveClient':'Archive this client? They’ll be hidden from the client list (their orders are unaffected) until an admin or staff member restores them.',
+    'confirm.archiveOrder':'Archive this order? It will be hidden from the order list until restored.',
+    'archived.clientBanner':'This client is archived — hidden from the client list.','archived.orderBanner':'This order is archived — hidden from the order list.',
+    'archived.by':'Archived by','archived.on':'on',
 
     'alert.fullNameRequired':'Full name is required.','alert.selectClient':'Select a client.',
     'alert.widthHeightRequired':'Width and height are required and must be positive numbers.',
@@ -143,6 +149,8 @@ export const I18N = {
 
     'act.sentQuote':'Sent quote to client — total ${total}','act.approvedQuote':'Quote approved by {by}','act.reopenedQuote':'Reopened quote (admin) — material calculations reset',
     'act.updatedPricingProduct':'Updated pricing for {type} to v{v}','act.updatedPricingModifiers':'Updated feature pricing modifiers to v{v}',
+    'act.archivedClient':'Archived client {name}','act.restoredClient':'Restored client {name}',
+    'act.archivedOrder':'Archived order {no}','act.restoredOrder':'Restored order {no}',
 
     'auth.invalidCredentials':'Incorrect email or password.','auth.noProfile':'No employee profile is set up for this login yet. Ask an administrator to add you in Supabase, then create your profiles row.',
     'auth.inactive':'This account has been deactivated. Contact an administrator.','auth.genericError':'Sign-in failed: {msg}',
@@ -238,7 +246,13 @@ export const I18N = {
     'common.name':'姓名','common.phone':'电话','common.email':'邮箱','common.address':'地址',
     'common.status':'状态','common.notes':'备注','common.close':'关闭','common.approve':'批准','common.back':'返回',
     'common.print':'打印 / 保存为PDF','common.calculate':'计算','common.confirm':'确认','common.na':'—',
-    'common.loading':'加载中…',
+    'common.loading':'加载中…','common.archive':'归档','common.restore':'恢复','common.archived':'已归档',
+    'common.showArchived':'显示已归档',
+
+    'confirm.archiveClient':'确定要归档该客户吗？该客户将从客户列表中隐藏（其订单不受影响），直到管理员或员工将其恢复。',
+    'confirm.archiveOrder':'确定要归档该订单吗？该订单将从订单列表中隐藏，直到被恢复。',
+    'archived.clientBanner':'该客户已归档 — 已从客户列表中隐藏。','archived.orderBanner':'该订单已归档 — 已从订单列表中隐藏。',
+    'archived.by':'归档人','archived.on':'于',
 
     'alert.fullNameRequired':'姓名为必填项。','alert.selectClient':'请选择一个客户。',
     'alert.widthHeightRequired':'宽度和高度为必填项，且必须为正数。',
@@ -288,6 +302,8 @@ export const I18N = {
 
     'act.sentQuote':'已将报价发送给客户 — 总额 ${total}','act.approvedQuote':'报价已由 {by} 批准','act.reopenedQuote':'已重新打开报价（管理员）— 物料计算已重置',
     'act.updatedPricingProduct':'已将 {type} 的定价更新至第 {v} 版','act.updatedPricingModifiers':'已将附加选项定价更新至第 {v} 版',
+    'act.archivedClient':'已归档客户 {name}','act.restoredClient':'已恢复客户 {name}',
+    'act.archivedOrder':'已归档订单 {no}','act.restoredOrder':'已恢复订单 {no}',
 
     'auth.invalidCredentials':'邮箱或密码错误。','auth.noProfile':'该登录尚未设置员工档案，请联系管理员在 Supabase 中为您创建 profiles 记录。',
     'auth.inactive':'该账户已被停用，请联系管理员。','auth.genericError':'登录失败：{msg}',

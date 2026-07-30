@@ -161,16 +161,28 @@ function mapClientRow(row){
     prefLang: row.pref_lang||'English', billingAddress: row.billing_address||'', projectAddress: row.project_address||'',
     referral: row.referral||'', notes: row.notes||'',
     ownerEmployeeId: row.owner_employee, ownerEmployee: profileName(row.owner_employee) || '—',
-    createdAt: row.created_at,
+    createdAt: row.created_at, archivedAt: row.archived_at, archivedBy: profileName(row.archived_by),
   };
 }
-export async function listClients(){
-  const rows = await call(supabase.from('clients').select('*').is('archived_at', null).order('created_at',{ascending:false}));
+export async function listClients(includeArchived=false){
+  let q = supabase.from('clients').select('*').order('created_at',{ascending:false});
+  if(!includeArchived) q = q.is('archived_at', null);
+  const rows = await call(q);
   return rows.map(mapClientRow);
 }
 export async function getClient(id){
-  const row = await call(supabase.from('clients').select('*').eq('id', id).is('archived_at', null).maybeSingle());
+  // Deliberately not filtered by archived_at — an archived client must still be
+  // viewable (e.g. from a link on one of their orders, or to restore them).
+  const row = await call(supabase.from('clients').select('*').eq('id', id).maybeSingle());
   return row ? mapClientRow(row) : null;
+}
+export async function archiveClient(id, fullName){
+  await call(supabase.from('clients').update({ archived_at: new Date().toISOString(), archived_by: state.user.id }).eq('id', id));
+  await insertActivity('archivedClient', { name: fullName });
+}
+export async function restoreClient(id, fullName){
+  await call(supabase.from('clients').update({ archived_at: null, archived_by: null }).eq('id', id));
+  await insertActivity('restoredClient', { name: fullName });
 }
 export async function findDuplicateClient(phone, email, excludeId){
   let q = supabase.from('clients').select('*').is('archived_at', null);
@@ -213,16 +225,29 @@ function mapOrderRow(row){
     status: row.status, deposit: row.deposit, paymentNotes: row.payment_notes||'',
     internalNotes: row.internal_notes||'', factoryNotes: row.factory_notes||'', installNotes: row.install_notes||'',
     factorySheetVersion: row.factory_sheet_version||0, createdAt: row.created_at,
+    archivedAt: row.archived_at, archivedBy: profileName(row.archived_by),
   };
 }
-export async function listOrders(){
+export async function listOrders(includeArchived=false){
+  let orderQ = supabase.from('orders').select('*, clients(full_name)').order('created_at',{ascending:false});
+  if(!includeArchived) orderQ = orderQ.is('archived_at', null);
   const [orders, items] = await Promise.all([
-    call(supabase.from('orders').select('*, clients(full_name)').is('archived_at', null).order('created_at',{ascending:false})),
+    call(orderQ),
     call(supabase.from('order_items').select('order_id,category')),
   ]);
   const byOrder = {};
   items.forEach(it => { (byOrder[it.order_id] = byOrder[it.order_id]||[]).push(it.category); });
   return orders.map(o => ({ ...mapOrderRow(o), clientName: o.clients?.full_name || '—', itemCategories: byOrder[o.id]||[] }));
+}
+export async function archiveOrder(id, orderNo){
+  await call(supabase.from('orders').update({ archived_at: new Date().toISOString(), archived_by: state.user.id }).eq('id', id));
+  await pushHistory(id, 'archivedOrder', {no:orderNo});
+  await insertActivity('archivedOrder', { no: orderNo });
+}
+export async function restoreOrder(id, orderNo){
+  await call(supabase.from('orders').update({ archived_at: null, archived_by: null }).eq('id', id));
+  await pushHistory(id, 'restoredOrder', {no:orderNo});
+  await insertActivity('restoredOrder', { no: orderNo });
 }
 
 function mapItemRow(row){
@@ -262,8 +287,10 @@ export async function listOrdersForClient(clientId){
   return orders.map(o => ({ ...mapOrderRow(o), itemCount: counts[o.id]||0 }));
 }
 export async function getOrderFull(id){
+  // Deliberately not filtered by archived_at — an archived order must still be
+  // viewable directly (e.g. from a link, or to restore it).
   const [order, items, quote, history] = await Promise.all([
-    call(supabase.from('orders').select('*').eq('id', id).is('archived_at', null).maybeSingle()),
+    call(supabase.from('orders').select('*').eq('id', id).maybeSingle()),
     call(supabase.from('order_items').select('*').eq('order_id', id).order('created_at')),
     call(supabase.from('order_quotes').select('*').eq('order_id', id).maybeSingle()),
     call(supabase.from('order_history').select('*').eq('order_id', id).order('at',{ascending:false})),

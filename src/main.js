@@ -160,8 +160,9 @@ async function renderDashboard(){
 }
 
 /* ================= CLIENTS ================= */
+let clientsShowArchived = false;
 async function renderClients(){
-  const list = await D.listClients();
+  const list = await D.listClients(clientsShowArchived);
   return `
     <div class="pageHead">
       <div><h2 data-i18n="clients.title">${t('clients.title')}</h2><div class="desc" data-i18n="clients.desc">${t('clients.desc')}</div></div>
@@ -169,6 +170,7 @@ async function renderClients(){
     </div>
     <div class="toolbar">
       <input id="clientSearchBox" placeholder="${t('clients.search')}" style="min-width:340px;" oninput="filterClientTable(this.value)">
+      <label class="small flexRow" style="gap:5px;"><input type="checkbox" ${clientsShowArchived?'checked':''} onchange="toggleArchivedClients(this.checked)">${t('common.showArchived')}</label>
     </div>
     <div class="card" style="padding:0;">
       <table id="clientTable"><thead><tr><th>${t('th.clientNo')}</th><th>${t('th.name')}</th><th>${t('th.phone')}</th><th>${t('th.email')}</th><th>${t('th.projectAddress')}</th><th>${t('th.language')}</th><th></th></tr></thead>
@@ -176,11 +178,13 @@ async function renderClients(){
     </div>
   `;
 }
+function toggleArchivedClients(checked){ clientsShowArchived = checked; route('clients'); }
 function clientRow(c){
+  const archived = !!c.archivedAt;
   return `<tr data-search="${esc((c.fullName+' '+c.clientNo+' '+c.phone1+' '+c.email+' '+c.projectAddress).toLowerCase())}">
-    <td>${c.clientNo}</td><td><a href="#" onclick="route('client-detail','${c.id}');return false;">${esc(c.fullName)}</a>${c.company?`<div class="small">${esc(c.company)}</div>`:''}</td>
+    <td>${c.clientNo}</td><td><a href="#" onclick="route('client-detail','${c.id}');return false;">${esc(c.fullName)}</a>${archived?` <span class="badge hold">${t('common.archived')}</span>`:''}${c.company?`<div class="small">${esc(c.company)}</div>`:''}</td>
     <td>${esc(c.phone1)}</td><td>${esc(c.email)}</td><td>${esc(c.projectAddress)}</td><td>${esc(opt(PREF_LANGS,c.prefLang))}</td>
-    <td class="rowActions"><a href="#" onclick="route('client-detail','${c.id}');return false;">${t('common.view')}</a>${canEdit()?`<a href="#" onclick="openClientModal('${c.id}');return false;">${t('common.edit')}</a>`:''}</td>
+    <td class="rowActions"><a href="#" onclick="route('client-detail','${c.id}');return false;">${t('common.view')}</a>${canEdit()&&!archived?`<a href="#" onclick="openClientModal('${c.id}');return false;">${t('common.edit')}</a>`:''}</td>
   </tr>`;
 }
 function filterClientTable(q){
@@ -242,16 +246,38 @@ async function saveClient(id){
     route(currentRoute==='client-detail'?'client-detail':'clients', clientId);
   }catch(err){ alert(err.message); }
 }
+async function archiveClient(id){
+  if(!confirm(t('confirm.archiveClient'))) return;
+  try{
+    const c = await D.getClient(id);
+    await D.archiveClient(id, c.fullName);
+    route('client-detail', id);
+  }catch(err){ alert(err.message); }
+}
+async function restoreClient(id){
+  try{
+    const c = await D.getClient(id);
+    await D.restoreClient(id, c.fullName);
+    route('client-detail', id);
+  }catch(err){ alert(err.message); }
+}
 
 async function renderClientDetail(id){
   const c = await D.getClient(id);
   if(!c) return renderClients();
+  const archived = !!c.archivedAt;
   const orders = await D.listOrdersForClient(id);
   return `
     <div class="pageHead">
-      <div><h2>${esc(c.fullName)} <span class="small">(${c.clientNo})</span></h2><div class="desc">${esc(c.projectAddress)}</div></div>
-      <div>${canEdit()?`<button class="btn secondary" onclick="openClientModal('${c.id}')">${t('common.edit')}</button>`:''} <button class="btn secondary" onclick="route('clients')">${t('order.back')}</button></div>
+      <div><h2>${esc(c.fullName)} <span class="small">(${c.clientNo})</span>${archived?` <span class="badge hold">${t('common.archived')}</span>`:''}</h2><div class="desc">${esc(c.projectAddress)}</div></div>
+      <div>
+        ${canEdit()&&!archived?`<button class="btn secondary" onclick="openClientModal('${c.id}')">${t('common.edit')}</button>`:''}
+        ${canEdit()&&!archived?`<button class="btn secondary" onclick="archiveClient('${c.id}')">${t('common.archive')}</button>`:''}
+        ${canEdit()&&archived?`<button class="btn secondary" onclick="restoreClient('${c.id}')">${t('common.restore')}</button>`:''}
+        <button class="btn secondary" onclick="route('clients')">${t('order.back')}</button>
+      </div>
     </div>
+    ${archived?`<div class="banner warn">${t('archived.clientBanner')} ${t('archived.by')} ${esc(c.archivedBy)} ${t('archived.on')} ${fmtDateTime(c.archivedAt)}.</div>`:''}
     <div class="grid cols-2">
       <div class="card">
         <h3 style="margin-top:0;font-size:14px;color:var(--navy)">${t('client.contact')}</h3>
@@ -295,8 +321,9 @@ function statusBadgeClass(s){
   if(['New Inquiry','Measurement Required'].includes(s)) return 'new';
   return 'progress';
 }
+let ordersShowArchived = false;
 async function renderOrders(){
-  const orders = await D.listOrders();
+  const orders = await D.listOrders(ordersShowArchived);
   return `
     <div class="pageHead">
       <div><h2 data-i18n="orders.title">${t('orders.title')}</h2><div class="desc" data-i18n="orders.desc">${t('orders.desc')}</div></div>
@@ -307,6 +334,7 @@ async function renderOrders(){
       <input id="filterEmployee" placeholder="${t('filter.employee')}" oninput="applyOrderFilters()">
       <input id="filterCustomer" placeholder="${t('filter.customer')}" oninput="applyOrderFilters()">
       <select id="filterProduct" onchange="applyOrderFilters()"><option value="">${t('filter.allProducts')}</option>${PRODUCT_TYPES.map(p=>`<option value="${p.id}">${esc(pname(p))}</option>`).join('')}</select>
+      <label class="small flexRow" style="gap:5px;"><input type="checkbox" ${ordersShowArchived?'checked':''} onchange="toggleArchivedOrders(this.checked)">${t('common.showArchived')}</label>
     </div>
     <div class="card" style="padding:0;">
       <table id="orderTable"><thead><tr><th>${t('th.orderNo')}</th><th>${t('th.client')}</th><th>${t('th.status')}</th><th>${t('th.orderDate')}</th><th>${t('th.dueDate')}</th><th>${t('th.salesperson')}</th><th>${t('th.items')}</th><th></th></tr></thead>
@@ -314,12 +342,14 @@ async function renderOrders(){
     </div>
   `;
 }
+function toggleArchivedOrders(checked){ ordersShowArchived = checked; route('orders'); }
 function orderRow(o){
   const today = new Date().toISOString().slice(0,10);
   const overdue = o.dueDate && o.dueDate < today && !['Completed','Installed','Cancelled/On Hold'].includes(o.status);
   const productTypes = [...new Set(o.itemCategories)].join(',');
+  const archived = !!o.archivedAt;
   return `<tr data-status="${esc(o.status)}" data-employee="${esc((o.salesperson+' '+o.officeEmployee+' '+o.measurementEmployee).toLowerCase())}" data-customer="${esc((o.clientName||'').toLowerCase())}" data-product="${esc(productTypes)}">
-    <td>${o.orderNo}${overdue?` <span title="${t('calc.overdueTitle')}" style="color:var(--red)">⚠</span>`:''}</td>
+    <td>${o.orderNo}${overdue?` <span title="${t('calc.overdueTitle')}" style="color:var(--red)">⚠</span>`:''}${archived?` <span class="badge hold">${t('common.archived')}</span>`:''}</td>
     <td><a href="#" onclick="route('client-detail','${o.clientId}');return false;">${esc(o.clientName)}</a></td>
     <td><span class="badge ${statusBadgeClass(o.status)}">${esc(statusLabel(o.status))}</span></td>
     <td>${fmtDate(o.orderDate)}</td><td>${fmtDate(o.dueDate)}</td><td>${esc(o.salesperson)}</td><td>${o.itemCategories.length}</td>
@@ -463,22 +493,39 @@ async function saveOrder(id){
     closeModal(); route('order-detail', orderId);
   }catch(err){ alert(err.message); }
 }
+async function archiveOrder(orderId){
+  if(!confirm(t('confirm.archiveOrder'))) return;
+  try{
+    await D.archiveOrder(orderId, currentOrder.orderNo);
+    route('order-detail', orderId);
+  }catch(err){ alert(err.message); }
+}
+async function restoreOrder(orderId){
+  try{
+    await D.restoreOrder(orderId, currentOrder.orderNo);
+    route('order-detail', orderId);
+  }catch(err){ alert(err.message); }
+}
 
 async function renderOrderDetail(id){
   const o = await D.getOrderFull(id);
   if(!o) return renderOrders();
   currentOrder = o;
+  const archived = !!o.archivedAt;
   const client = await D.getClient(o.clientId);
   return `
     <div class="pageHead">
-      <div><h2>${o.orderNo} <span class="badge ${statusBadgeClass(o.status)}">${esc(statusLabel(o.status))}</span></h2>
+      <div><h2>${o.orderNo} <span class="badge ${statusBadgeClass(o.status)}">${esc(statusLabel(o.status))}</span>${archived?` <span class="badge hold">${t('common.archived')}</span>`:''}</h2>
         <div class="desc">${esc(client?.fullName||'')} — ${esc(o.projectAddress)}</div></div>
       <div>
-        ${canEdit()?`<button class="btn secondary" onclick="openOrderModal('${o.id}')">${t('common.edit')}</button>`:''}
+        ${canEdit()&&!archived?`<button class="btn secondary" onclick="openOrderModal('${o.id}')">${t('common.edit')}</button>`:''}
         <button class="btn secondary" onclick="openFactorySheet('${o.id}')">${t('order.factorySheetBtn')}</button>
+        ${canEdit()&&!archived?`<button class="btn secondary" onclick="archiveOrder('${o.id}')">${t('common.archive')}</button>`:''}
+        ${canEdit()&&archived?`<button class="btn secondary" onclick="restoreOrder('${o.id}')">${t('common.restore')}</button>`:''}
         <button class="btn secondary" onclick="route('orders')">${t('order.back')}</button>
       </div>
     </div>
+    ${archived?`<div class="banner warn">${t('archived.orderBanner')} ${t('archived.by')} ${esc(o.archivedBy)} ${t('archived.on')} ${fmtDateTime(o.archivedAt)}.</div>`:''}
     <div class="grid cols-3">
       <div class="card"><div class="small">${t('order.orderDate')}</div><b>${fmtDate(o.orderDate)}</b></div>
       <div class="card"><div class="small">${t('order.requiredCompletion')}</div><b>${fmtDate(o.dueDate)}</b></div>
@@ -1140,8 +1187,9 @@ function closeModal(){ document.getElementById('modalOverlay').classList.remove(
 /* ================= EXPOSE HANDLERS FOR INLINE onclick=... ================= */
 Object.assign(window, {
   route, logout, setLang: onSetLang,
-  openClientModal, saveClient, checkDup, filterClientTable,
+  openClientModal, saveClient, checkDup, filterClientTable, toggleArchivedClients, archiveClient, restoreClient,
   openOrderModal, saveOrder, applyOrderFilters, calPrevMonth, calNextMonth, calGoToday,
+  toggleArchivedOrders, archiveOrder, restoreOrder,
   openItemModal, saveItem, refreshDiagramPreview, duplicateItem, runCalculation, approveCalc, reopenCalc,
   switchOrderTab,
   updateQuoteRates, updateManualTotal, sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
