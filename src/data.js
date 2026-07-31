@@ -84,7 +84,7 @@ export async function saveFormula(productType, draft){
   await call(supabase.from('material_formulas').update({
     active: draft.active, version: current.version + 1,
     min_w: draft.minW, max_w: draft.maxW, min_h: draft.minH, max_h: draft.maxH,
-    deductions: draft.deductions, changed_by: state.user.id, changed_at: new Date().toISOString(),
+    changed_by: state.user.id, changed_at: new Date().toISOString(),
   }).eq('product_type', productType));
   await insertActivity('updatedFormula', { type: productType, v: current.version + 1 });
   await loadFormulas();
@@ -254,12 +254,14 @@ function mapItemRow(row){
   const cr = row.calc_results || {};
   return {
     id: row.id, itemNo: row.item_no, category: row.category, width: row.width, height: row.height,
+    dimO: row.dim_o, dimS: row.dim_s, dimT: row.dim_t,
     unit: row.unit||'mm', quantity: row.quantity, frameSystem: row.frame_system||'', openingStyle: row.opening_style||'',
     glassType: row.glass_type||'', glassThickness: row.glass_thickness||'', color: row.color||'',
     screenType: row.screen_type||'', hardware: row.hardware||'', grid: row.grid||'', specialOptions: row.special_options||'',
     installNotes: row.install_notes||'', room: row.room||'', notes: row.notes||'',
     calc: {
-      status: row.calc_status, results: cr.components || null, warnings: cr.warnings || [], error: cr.error || null,
+      status: row.calc_status, results: cr.components || null, glass: cr.glass || null, areaM2: cr.areaM2 ?? null,
+      scalesWithQty: cr.scalesWithQty !== false, warnings: cr.warnings || [], error: cr.error || null,
       formulaVersion: row.calc_formula_version, calculatedBy: profileName(row.calc_by), calculatedAt: row.calc_at,
       approvedBy: profileName(row.calc_approved_by), approvedAt: row.calc_approved_at,
     },
@@ -339,7 +341,8 @@ export async function createItem(orderId, existingCount, data){
     const itemNo = `Window ${attempt}`;
     const { data: row, error } = await supabase.from('order_items').insert({
       order_id: orderId, item_no: itemNo, category: data.category, width: data.width, height: data.height,
-      unit: 'mm', quantity: data.quantity, frame_system: data.frameSystem, opening_style: data.openingStyle,
+      dim_o: data.dimO ?? null, dim_s: data.dimS ?? null, dim_t: data.dimT ?? null,
+      unit: data.unit, quantity: data.quantity, frame_system: data.frameSystem, opening_style: data.openingStyle,
       glass_type: data.glassType, glass_thickness: data.glassThickness, color: data.color, screen_type: data.screenType,
       hardware: data.hardware, grid: data.grid, special_options: data.specialOptions, install_notes: data.installNotes,
       room: data.room, notes: data.notes,
@@ -352,7 +355,8 @@ export async function createItem(orderId, existingCount, data){
 }
 export async function updateItem(orderId, itemId, itemNo, data, measurementsChanged){
   const patch = {
-    category: data.category, width: data.width, height: data.height, quantity: data.quantity,
+    category: data.category, width: data.width, height: data.height,
+    dim_o: data.dimO ?? null, dim_s: data.dimS ?? null, dim_t: data.dimT ?? null, unit: data.unit, quantity: data.quantity,
     frame_system: data.frameSystem, opening_style: data.openingStyle, glass_type: data.glassType,
     glass_thickness: data.glassThickness, color: data.color, screen_type: data.screenType, hardware: data.hardware,
     grid: data.grid, special_options: data.specialOptions, install_notes: data.installNotes, room: data.room,
@@ -371,7 +375,8 @@ export async function duplicateItem(orderId, srcItem, existingCount){
     const itemNo = `Window ${attempt}`;
     const { error } = await supabase.from('order_items').insert({
       order_id: orderId, item_no: itemNo, category: srcItem.category, width: srcItem.width, height: srcItem.height,
-      unit: 'mm', quantity: srcItem.quantity, frame_system: srcItem.frameSystem, opening_style: srcItem.openingStyle,
+      dim_o: srcItem.dimO ?? null, dim_s: srcItem.dimS ?? null, dim_t: srcItem.dimT ?? null,
+      unit: srcItem.unit, quantity: srcItem.quantity, frame_system: srcItem.frameSystem, opening_style: srcItem.openingStyle,
       glass_type: srcItem.glassType, glass_thickness: srcItem.glassThickness, color: srcItem.color,
       screen_type: srcItem.screenType, hardware: srcItem.hardware, grid: srcItem.grid,
       special_options: srcItem.specialOptions, install_notes: srcItem.installNotes, room: srcItem.room, notes: srcItem.notes,
@@ -384,7 +389,8 @@ export async function duplicateItem(orderId, srcItem, existingCount){
 }
 export async function runCalculation(orderId, item, calcResult){
   const patch = calcResult.ok
-    ? { calc_status:'calculated', calc_results:{components:calcResult.components, warnings:calcResult.warnings},
+    ? { calc_status:'calculated', calc_results:{components:calcResult.components, glass:calcResult.glass,
+          areaM2:calcResult.areaM2, scalesWithQty:calcResult.scalesWithQty, warnings:calcResult.warnings},
         calc_formula_version:calcResult.formulaVersion, calc_by:state.user.id, calc_at:new Date().toISOString(),
         calc_approved_by:null, calc_approved_at:null }
     : { calc_status:'draft', calc_results:{error:calcResult.error}, calc_formula_version:null, calc_by:null, calc_at:null,

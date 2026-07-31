@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>calc-engine regression test</title></head>
+<body>
+<!--
+  Regression test for src/calc-engine.js, using the exact worked examples
+  already present in Home Fortune's own cut-list workbooks
+  (家福工单32132.NEW.xls, 4000美式窗下料尺寸-new.xls). Every value below was
+  read directly out of those files, not estimated — if this test ever fails,
+  do not "fix" it by changing the expected numbers; the formula changed and
+  needs re-verifying against the workbooks first.
+
+  Run it: serve the repo root (e.g. `python3 -m http.server 8420`) and open
+  /tests/calc-engine.test.html — it prints PASS/FAIL to the page.
+-->
+<pre id="out">running...</pre>
+<script type="module">
+import { calcComponents } from '../src/calc-engine.js';
+
+const out = document.getElementById('out');
+let log = '';
+function print(s){ log += s + '\n'; }
+
+const formulas = {};
+['hmst82_fixed','hmst82_xo_ox','hmst82_xox','hmst82_lower_hung','hmst82_upper_hung',
+ 'p4000_x','p4000_xx','p4000_ox','p4000_xox','p4000_fixed_over_xox','p4000_stacked_ox']
+  .forEach(id => formulas[id] = {active:true, version:1, minW:null,maxW:null,minH:null,maxH:null});
+
+let pass = 0, fail = 0;
+function check(name, actual, expected, tol=0.02){
+  const ok = Math.abs(actual - expected) <= tol;
+  if(ok) pass++; else { fail++; print(`  FAIL ${name}: got ${actual}, expected ${expected}`); }
+  return ok;
+}
+function run(name, category, dims, qty, expectedLengths, expectedGlass){
+  print(`\n=== ${name} ===`);
+  const r = calcComponents(category, dims, qty, formulas);
+  if(!r.ok){ fail++; print(`  FAIL: calc returned error: ${r.error}`); return; }
+  const lens = r.components.map(c=>c.length);
+  print(`  lengths: ${lens.join(', ')}`);
+  expectedLengths.forEach((exp,i)=> check(`${name} component[${i}] (${r.components[i]?.label})`, lens[i], exp));
+  if(lens.length !== expectedLengths.length) { fail++; print(`  FAIL: expected ${expectedLengths.length} components, got ${lens.length}`); }
+  if(expectedGlass && r.glass){
+    r.glass.forEach((g,i)=>{
+      if(expectedGlass[i]){
+        check(`${name} glass[${i}].width`, g.widthIn, expectedGlass[i][0]);
+        check(`${name} glass[${i}].height`, g.heightIn, expectedGlass[i][1]);
+      }
+    });
+  }
+}
+
+// Source: 家福工单32132.NEW.xls, sheet 82型材固定窗. W=34.25in H=63.875in.
+run('HMST82 fixed', 'hmst82_fixed', {W:34.25,H:63.875}, 1,
+  [875.95, 1628.425, 827.95, 1580.425], [[32.3125,61.9375]]);
+
+// Source: 82型材XO OX. W=30in H=30in O=15in(auto) Q=1.
+run('HMST82 XO/OX', 'hmst82_xo_ox', {W:30,H:30}, 1,
+  [768,768,359,707.5,707.5,729,723,347,722.5,310,665.5,308,681.5],
+  [[13.375,28.125],[11.9675,25.7]]);
+
+// Source: 82型材XOX. W=93.25in H=45.875in O=24in Q=1.
+run('HMST82 XOX', 'hmst82_xox', {W:93.25,H:45.875,O:24}, 1,
+  [2374.55,1171.225,587.6,1110.725,1110.725,1133.225,2329.55,1119.55,1122.725,540.6,1068.725,537.6,1082.725],
+  [[43.75,44],[20.9675,41.575]]);
+
+// Source: 82型材下提拉窗. W=34.5in H=46.25in O=18.5in Q=1.
+run('HMST82 lower-hung', 'hmst82_lower_hung', {W:34.5,H:46.25,O:18.5}, 1,
+  [882.3,1180.75,446.9,821.3,821.3,840.3,838.3,668.85,770.3,398.9,794.3,396.9],
+  [[32.6875,26.0625],[30.25,15.375]]);
+
+// Source: 82型材上提拉窗. W=22.75in H=58.5in O=18.5in Q=2 (workbook quantities
+// do NOT scale with Q — reproduced faithfully; see calc-engine.js comments).
+run('HMST82 upper-hung', 'hmst82_upper_hung', {W:22.75,H:58.5,O:18.5}, 2,
+  [583.85,1491.9,446.9,521.85,521.85,546.85,539.85,979,474.85,423.4,496.85,396.9],
+  [[21.0045,38.2475],[18.505,15.4375]]);
+{
+  const r = calcComponents('hmst82_upper_hung', {W:22.75,H:58.5,O:18.5}, 2, formulas);
+  check('upper-hung totalQty NOT scaled (frame width)', r.components[0].totalQty, 2);
+}
+
+// Source: 4000平开窗（X）. W=247mm H=1473mm Q=1.
+run('4000 X', 'p4000_x', {W:247,H:1473}, 1, [195,1421,149,1375,40,1266]);
+{
+  const r = calcComponents('p4000_x', {W:247,H:1473}, 1, formulas);
+  check('4000 X area', r.areaM2, 0.363831);
+}
+
+// Source: 4000平开窗（XX）. W=1175mm H=724mm Q=1.
+run('4000 XX', 'p4000_xx', {W:1175,H:724}, 1, [1123,672,507.5,626,669,398.5,517]);
+
+// Source: 4000平开窗（OX). W=857mm H=1158mm Q=1.
+run('4000 OX', 'p4000_ox', {W:857,H:1158}, 1, [805,1106,348.5,1060,1103,239.5,951,379,1091]);
+
+// Source: 4000平开窗（XOX). W=2080mm S=508mm H=860mm Q=1.
+run('4000 XOX', 'p4000_xox', {W:2080,S:508,H:860}, 1, [2028,808,428,762,805,319,653,1032.3,653]);
+
+// Source: 4000平开窗（0 XOX）. W=2133mm S=559mm H=1524mm T=914mm Q=1.
+run('4000 fixed-over-XOX', 'p4000_fixed_over_xox', {W:2133,S:559,H:1524,T:914}, 1,
+  [2081,1472,479,530,2078,1469,370,421,983.3,421,2066,864.65]);
+
+// Source: 4000平开窗（O X). W=609mm H=1654mm T=1117mm Q=1.
+run('4000 stacked O/X', 'p4000_stacked_ox', {W:609,H:1654,T:1117}, 1, [557,1602,511,1099.5,554]);
+
+print(`\n\nTOTAL: ${pass} passed, ${fail} failed`);
+out.textContent = log;
+document.title = fail === 0 ? 'PASS - calc-engine regression test' : 'FAIL - calc-engine regression test';
+window.__testResult = {pass, fail};
+</script>
+</body></html>

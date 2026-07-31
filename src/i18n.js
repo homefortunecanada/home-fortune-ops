@@ -15,7 +15,7 @@ export const I18N = {
     'dash.title':'Dashboard','dash.desc':'Overview of current work across all orders.',
     'dash.overdue':'Overdue Orders','dash.recent':'Recent Activity','dash.noOverdue':'No overdue orders. Nice work.',
     'dash.missingInfo':'order(s) have missing information (no measurement employee assigned or no items entered).',
-    'dash.footnote':'Calculation results use SAMPLE placeholder formulas and pricing, not verified company production rules — see Formula Admin.',
+    'dash.footnote':'Material cut-size formulas are verified against Home Fortune\'s own cut-list workbooks. Client quote pricing still uses SAMPLE placeholder rates — see Formula Admin.',
     'stat.newInquiry':'New Inquiry','stat.measurementRequired':'Measurement Required','stat.quoteInProgress':'Quote In Progress',
     'stat.customerApproval':'Customer Approval Required','stat.readyForFactory':'Ready For Factory','stat.inProduction':'In Production',
     'stat.installScheduled':'Installation Scheduled','stat.overdue':'Overdue',
@@ -25,7 +25,7 @@ export const I18N = {
     'th.clientNo':'Client #','th.name':'Name','th.phone':'Phone','th.email':'Email','th.projectAddress':'Project Address',
     'th.language':'Language','th.orders':'Orders','th.orderNo':'Order #','th.client':'Client','th.status':'Status',
     'th.orderDate':'Order Date','th.dueDate':'Due Date','th.due':'Due','th.salesperson':'Salesperson','th.items':'Items',
-    'th.component':'Component','th.widthMm':'Width (mm)','th.heightMm':'Height (mm)','th.qtyPerUnit':'Qty/unit',
+    'th.component':'Component','th.widthMm':'Width (mm)','th.heightMm':'Height (mm)','th.cutLength':'Cut Length (mm)','th.glass':'Glass','th.qtyPerUnit':'Qty/unit',
     'th.totalQty':'Total Qty','th.product':'Product','th.versionCol':'Version','th.widthRange':'Width range','th.heightRange':'Height range',
     'th.lastChanged':'Last changed',
 
@@ -58,17 +58,23 @@ export const I18N = {
     'item.approve':'Approve','item.reopenAdmin':'Reopen (admin)','item.notCalculated':'Not calculated',
     'item.draftNotCalc':'Draft — not yet calculated','item.calcAwaiting':'Calculated — awaiting approval','item.approvedBy':'Approved by',
     'item.qty':'qty','item.addWindow':'Add Window / Product','item.editItem':'Edit Item',
-    'form.category':'Product category *','form.width':'Width (mm) *','form.height':'Height (mm) *','form.qty':'Quantity *',
+    'form.category':'Product category *','form.width':'Width ({unit}) *','form.height':'Height ({unit}) *','form.qty':'Quantity *',
+    'form.dimO':'Opening dimension O ({unit})','form.dimOAuto':'Opening dimension O ({unit}) — auto (W/2)',
+    'form.dimS':'Side-sash width S ({unit})','form.dimT':'Section height T ({unit})',
+    'calc.upperHungQtyWarning':'This configuration\'s quantities come directly from the source spreadsheet and do NOT scale with the quantity above — verify piece counts manually before cutting if quantity is more than 1.',
     'form.openingStyle':'Opening style','form.frameSystem':'Frame / profile system','form.glassType':'Glass type',
     'form.glassThickness':'Glass thickness / glazing','form.colour':'Colour','form.screenType':'Screen type','form.hardware':'Hardware',
     'form.grid':'Grid / grille options','form.room':'Room / location','form.specialOptions':'Special manufacturing options',
     'form.installReq':'Installation requirements','form.notes':'Notes',
 
     'calc.formulaVersion':'Formula version','calc.calculatedBy':'calculated by','calc.on':'on',
-    'calc.sampleNote':'Sample/placeholder formula — not yet verified against company manufacturing rules.',
+    'calc.sampleNote':'Custom shapes require individual engineering review — not a standard formula.',
+    'calc.verifiedNote':'Verified against Home Fortune\'s own cut-list workbooks — see tests/calc-engine.test.html.',
+    'calc.areaLabel':'Area',
     'calc.error.custom':'Custom shapes require individual engineering review. No verified formula is on file — do not guess. Route to admin for manual calculation.',
     'calc.error.inactive':'Formula for this product type is inactive or missing. Contact an administrator.',
-    'calc.error.badnum':'Width and height must be positive numbers.',
+    'calc.error.badnum':'All required dimensions must be positive numbers.',
+    'calc.error.negativeResult':'These dimensions produce a zero or negative cut length or glass size — double check the measurements before calculating.',
     'calc.warn.widthRange':'Width {w}mm is outside the approved range ({min}–{max}mm) for this product.',
     'calc.warn.heightRange':'Height {h}mm is outside the approved range ({min}–{max}mm) for this product.',
     'calc.overdueTitle':'Overdue',
@@ -79,11 +85,12 @@ export const I18N = {
 
     'formulas.title':'Formula Admin','formulas.desc':'Deterministic calculation rules by product type. Admin-only.',
     'formulas.restricted':'Formula management is restricted to Administrators.',
-    'formulas.warnBanner':'⚠ All values below are SAMPLE placeholder deductions. They must be replaced with Home Fortune’s verified manufacturing formulas, and tested against manually-confirmed sample orders, before any real production use.',
+    'formulas.warnBanner':'Cut-size formulas are real, verified logic checked line-by-line against Home Fortune’s own cut-list workbooks (see tests/calc-engine.test.html) — not editable here, see each item for details. Custom Shape still requires individual engineering review. Only Active/Inactive and width/height range warnings are editable below.',
     'formulas.active':'Active','formulas.inactive':'Inactive','formulas.edit':'Edit Formula','formulas.version':'Version',
     'formulas.autoIncrement':'(auto-increments on save)','formulas.minWidth':'Min width (mm)','formulas.maxWidth':'Max width (mm)',
     'formulas.minHeight':'Min height (mm)','formulas.maxHeight':'Max height (mm)','formulas.deductions':'Deductions (mm)',
     'formulas.noDeductions':'No deduction fields — engineering review required for this product type.',
+    'formulas.codeDefinedNote':'This formula is verified, real production logic implemented in code (see calc-engine.js and tests/calc-engine.test.html) — cross-checked line-by-line against Home Fortune\'s own cut-list workbooks. It is not editable from this screen; changing the calculation itself requires a code change and re-running the regression tests. You can still adjust whether it\'s active and its width/height range warnings below.',
     'formulas.testFormula':'Test this formula (uses values above, unsaved)','formulas.testWidth':'Test width (mm)',
     'formulas.testHeight':'Test height (mm)','formulas.testQty':'Test qty','formulas.runTest':'Run Test',
     'formulas.versionHistory':'Version history','formulas.none':'none yet','formulas.savePublish':'Save & Publish',
@@ -154,6 +161,7 @@ export const I18N = {
 
     'auth.invalidCredentials':'Incorrect email or password.','auth.noProfile':'No employee profile is set up for this login yet. Ask an administrator to add you in Supabase, then create your profiles row.',
     'auth.inactive':'This account has been deactivated. Contact an administrator.','auth.genericError':'Sign-in failed: {msg}',
+    'auth.unknownRole':'Your account has role "{role}", which this app doesn\'t recognize. Ask an administrator to set it to one of: admin, office, measurement, factory, readonly.',
   },
   zh: {
     'nav.dashboard':'仪表盘','nav.clients':'客户','nav.orders':'订单','nav.calendar':'日历','nav.formulas':'公式管理',
@@ -168,7 +176,7 @@ export const I18N = {
     'dash.title':'仪表盘','dash.desc':'查看所有订单的当前工作概览。',
     'dash.overdue':'逾期订单','dash.recent':'最近活动','dash.noOverdue':'没有逾期订单，做得好。',
     'dash.missingInfo':'个订单信息不完整（未指派测量员或未录入项目）。',
-    'dash.footnote':'计算结果使用占位示例公式与价格，并非已核实的公司生产规则 — 详见公式管理。',
+    'dash.footnote':'物料下料公式已与家福自己的下料表核对无误。客户报价仍使用占位示例价格 — 详见公式管理。',
     'stat.newInquiry':'新询价','stat.measurementRequired':'需要测量','stat.quoteInProgress':'报价中',
     'stat.customerApproval':'需要客户确认','stat.readyForFactory':'待送工厂','stat.inProduction':'生产中',
     'stat.installScheduled':'已安排安装','stat.overdue':'逾期',
@@ -178,7 +186,7 @@ export const I18N = {
     'th.clientNo':'客户编号','th.name':'姓名','th.phone':'电话','th.email':'邮箱','th.projectAddress':'项目地址',
     'th.language':'语言','th.orders':'订单数','th.orderNo':'订单号','th.client':'客户','th.status':'状态',
     'th.orderDate':'订单日期','th.dueDate':'要求完工日期','th.due':'到期日','th.salesperson':'销售员','th.items':'项目数',
-    'th.component':'部件','th.widthMm':'宽度(mm)','th.heightMm':'高度(mm)','th.qtyPerUnit':'每件数量',
+    'th.component':'部件','th.widthMm':'宽度(mm)','th.heightMm':'高度(mm)','th.cutLength':'下料长度(mm)','th.glass':'玻璃','th.qtyPerUnit':'每件数量',
     'th.totalQty':'总数量','th.product':'产品','th.versionCol':'版本','th.widthRange':'宽度范围','th.heightRange':'高度范围',
     'th.lastChanged':'最后修改',
 
@@ -211,17 +219,23 @@ export const I18N = {
     'item.approve':'批准','item.reopenAdmin':'重新打开（管理员）','item.notCalculated':'尚未计算',
     'item.draftNotCalc':'草稿 — 尚未计算','item.calcAwaiting':'已计算 — 等待批准','item.approvedBy':'批准人',
     'item.qty':'数量','item.addWindow':'添加窗户/产品','item.editItem':'编辑项目',
-    'form.category':'产品类别 *','form.width':'宽度(mm) *','form.height':'高度(mm) *','form.qty':'数量 *',
+    'form.category':'产品类别 *','form.width':'宽度 W（{unit}）*','form.height':'高度 H（{unit}）*','form.qty':'数量 *',
+    'form.dimO':'开窗尺寸 O（{unit}）','form.dimOAuto':'开窗尺寸 O（{unit}）— 自动计算（W/2）',
+    'form.dimS':'侧扇宽度 S（{unit}）','form.dimT':'分段高度 T（{unit}）',
+    'calc.upperHungQtyWarning':'该窗型的数量直接取自原始表格，数量字段大于1时不会自动翻倍——裁料前请人工核实件数。',
     'form.openingStyle':'开启方式','form.frameSystem':'框架/型材系统','form.glassType':'玻璃类型',
     'form.glassThickness':'玻璃厚度/中空规格','form.colour':'颜色','form.screenType':'纱窗类型','form.hardware':'五金件',
     'form.grid':'格条/网格选项','form.room':'房间/位置','form.specialOptions':'特殊制造选项',
     'form.installReq':'安装要求','form.notes':'备注',
 
     'calc.formulaVersion':'公式版本','calc.calculatedBy':'计算人','calc.on':'于',
-    'calc.sampleNote':'示例/占位公式 — 尚未依据公司生产规则核实。',
+    'calc.sampleNote':'异形窗需要单独的工程审核 — 无标准公式。',
+    'calc.verifiedNote':'已与家福自己的下料表核对无误 — 详见 tests/calc-engine.test.html。',
+    'calc.areaLabel':'面积',
     'calc.error.custom':'异形窗需要单独的工程审核。系统中没有已核实的公式 — 请勿猜测，请转交管理员手动计算。',
     'calc.error.inactive':'该产品类型的公式未启用或缺失，请联系管理员。',
-    'calc.error.badnum':'宽度和高度必须为正数。',
+    'calc.error.badnum':'所有必填尺寸必须为正数。',
+    'calc.error.negativeResult':'当前尺寸会导致下料长度或玻璃尺寸为零或负数——请在计算前再次核实测量数据。',
     'calc.warn.widthRange':'宽度 {w}mm 超出该产品的批准范围（{min}–{max}mm）。',
     'calc.warn.heightRange':'高度 {h}mm 超出该产品的批准范围（{min}–{max}mm）。',
     'calc.overdueTitle':'逾期',
@@ -232,11 +246,12 @@ export const I18N = {
 
     'formulas.title':'公式管理','formulas.desc':'按产品类型设定的确定性计算规则（仅管理员）。',
     'formulas.restricted':'公式管理仅限管理员使用。',
-    'formulas.warnBanner':'⚠ 以下所有数值均为示例占位扣减值。在投入任何实际生产使用前，必须替换为家福门窗已核实的生产制造公式，并与人工确认过的样本订单进行测试比对。',
+    'formulas.warnBanner':'下料公式为真实、已核实的逻辑，已逐条与家福自己的下料表核对（见 tests/calc-engine.test.html）——此页面不可编辑公式本身，详情见各项目。异形窗仍需单独工程审核。下方仅可编辑启用状态及宽高范围警告。',
     'formulas.active':'启用','formulas.inactive':'停用','formulas.edit':'编辑公式','formulas.version':'版本',
     'formulas.autoIncrement':'（保存时自动递增）','formulas.minWidth':'最小宽度(mm)','formulas.maxWidth':'最大宽度(mm)',
     'formulas.minHeight':'最小高度(mm)','formulas.maxHeight':'最大高度(mm)','formulas.deductions':'扣减值(mm)',
     'formulas.noDeductions':'无扣减字段 — 该产品类型需要工程审核。',
+    'formulas.codeDefinedNote':'该公式是已核实的真实生产逻辑，直接写在代码中（见 calc-engine.js 与 tests/calc-engine.test.html），已逐条与家福自己的下料表核对无误。此页面无法编辑公式本身——修改计算逻辑需要修改代码并重新运行回归测试。您仍可在下方调整是否启用及宽高范围警告。',
     'formulas.testFormula':'测试该公式（使用上方数值，未保存）','formulas.testWidth':'测试宽度(mm)',
     'formulas.testHeight':'测试高度(mm)','formulas.testQty':'测试数量','formulas.runTest':'运行测试',
     'formulas.versionHistory':'版本历史','formulas.none':'暂无','formulas.savePublish':'保存并发布',
@@ -307,6 +322,7 @@ export const I18N = {
 
     'auth.invalidCredentials':'邮箱或密码错误。','auth.noProfile':'该登录尚未设置员工档案，请联系管理员在 Supabase 中为您创建 profiles 记录。',
     'auth.inactive':'该账户已被停用，请联系管理员。','auth.genericError':'登录失败：{msg}',
+    'auth.unknownRole':'您的账户角色为 "{role}"，此系统无法识别。请联系管理员将其设置为以下之一：admin、office、measurement、factory、readonly。',
   }
 };
 export function t(key){ const lang = state.lang || 'en'; return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key; }
@@ -339,14 +355,40 @@ export function canEdit(){ return state.user.role !== 'readonly'; }
 export function isAdmin(){ return state.user.role === 'admin'; }
 
 /* ---------------- product catalog (bilingual option lists) ---------------- */
+// Real product line, verified against Home Fortune's own cut-list workbooks
+// (家福工单32132.NEW.xls, 4000美式窗下料尺寸-new.xls) — see db/migrations and
+// calc-engine.js for the underlying formulas and what's still unresolved.
 export const PRODUCT_TYPES = [
-  {id:'casement', en:'Casement Window', zh:'平开窗'},
-  {id:'awning', en:'Awning Window', zh:'上悬窗'},
-  {id:'slider', en:'Slider Window', zh:'推拉窗'},
-  {id:'bay_bow', en:'Bay & Bow Window', zh:'凸窗/弓形窗'},
-  {id:'patio_door', en:'Patio Door', zh:'推拉门'},
+  {id:'hmst82_fixed', en:'HMST82 Fixed Window', zh:'HMST82 固定窗'},
+  {id:'hmst82_xo_ox', en:'HMST82 XO/OX Slider', zh:'HMST82 XO/OX 横拉窗'},
+  {id:'hmst82_xox', en:'HMST82 XOX Slider', zh:'HMST82 XOX 横拉窗'},
+  {id:'hmst82_lower_hung', en:'HMST82 Lower-Sash Hung', zh:'HMST82 下提拉窗'},
+  {id:'hmst82_upper_hung', en:'HMST82 Upper-Sash Hung', zh:'HMST82 上提拉窗'},
+  {id:'p4000_x', en:'4000 Single Casement (X)', zh:'4000 平开窗（X）'},
+  {id:'p4000_xx', en:'4000 Double Casement (XX)', zh:'4000 平开窗（XX）'},
+  {id:'p4000_ox', en:'4000 Fixed + Casement (OX)', zh:'4000 平开窗（OX）'},
+  {id:'p4000_xox', en:'4000 Two Casements + Centre Fixed (XOX)', zh:'4000 平开窗（XOX）'},
+  {id:'p4000_fixed_over_xox', en:'4000 Fixed-over-XOX', zh:'4000 平开窗（上固定下XOX）'},
+  {id:'p4000_stacked_ox', en:'4000 Stacked Operable/Fixed (O/X)', zh:'4000 平开窗（上下叠加 O/X）'},
   {id:'custom_shape', en:'Custom Shape (Arch/Specialty)', zh:'异形窗（拱形/特殊）'}
 ];
+// Which extra dimensions each configuration needs beyond width/height, and in
+// what unit the whole item is entered — HMST82 is inches, 4000 is millimetres
+// (matches the source workbooks exactly; do not mix units within a config).
+export const CATEGORY_CONFIG = {
+  hmst82_fixed:         { unit:'in', dims:[] },
+  hmst82_xo_ox:          { unit:'in', dims:[], oAuto:true },
+  hmst82_xox:            { unit:'in', dims:['O'] },
+  hmst82_lower_hung:     { unit:'in', dims:['O'] },
+  hmst82_upper_hung:     { unit:'in', dims:['O'], scalesWithQty:false },
+  p4000_x:               { unit:'mm', dims:[] },
+  p4000_xx:              { unit:'mm', dims:[] },
+  p4000_ox:              { unit:'mm', dims:[] },
+  p4000_xox:             { unit:'mm', dims:['S'] },
+  p4000_fixed_over_xox:  { unit:'mm', dims:['S','T'] },
+  p4000_stacked_ox:      { unit:'mm', dims:['T'] },
+  custom_shape:          { unit:'mm', dims:[] },
+};
 // Stored value is always the English string (canonical data); zh is the display label only.
 export const OPENING_STYLES = [
   {en:'Fixed', zh:'固定'}, {en:'Left Hand', zh:'左开'}, {en:'Right Hand', zh:'右开'}, {en:'Top Hinge', zh:'上悬'},

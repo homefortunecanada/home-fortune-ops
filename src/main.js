@@ -3,7 +3,7 @@ import * as D from './data.js';
 import * as C from './calc-engine.js';
 import {
   t, tf, actMsg, esc, fmtDate, fmtDateTime, opt, optionsHtml, statusLabel, pname, productLabel, opt2en, opt2zh,
-  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, OPENING_STYLES, GLASS_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
+  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, OPENING_STYLES, GLASS_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
   canEdit, isAdmin,
 } from './i18n.js';
 
@@ -24,6 +24,7 @@ async function establishSession(session){
   catch(e){ showLoginError(tf('auth.genericError',{msg:e.message})); await D.signOut(); return false; }
   if(!profile){ showLoginError(t('auth.noProfile')); await D.signOut(); return false; }
   if(!profile.active){ showLoginError(t('auth.inactive')); await D.signOut(); return false; }
+  if(!ROLES[profile.role]){ showLoginError(tf('auth.unknownRole',{role:profile.role})); await D.signOut(); return false; }
   state.session = session;
   state.user = profile;
   await Promise.all([D.loadProfiles(), D.loadStatuses(), D.loadFormulas(), D.loadPricing()]);
@@ -89,7 +90,8 @@ function buildNav(){
   nav.innerHTML = NAV_ITEMS.filter(i=>allowed.includes(i.id)).map(i=>
     `<a href="#" data-route="${i.id}" class="${currentRoute===i.id?'active':''}" onclick="route('${i.id}');return false;">
       <span>${i.icon}</span><span>${t(i.key)}</span></a>`).join('');
-  document.getElementById('userRoleLabel').textContent = ROLES[state.user.role][state.lang] || ROLES[state.user.role].en;
+  const roleInfo = ROLES[state.user.role];
+  document.getElementById('userRoleLabel').textContent = roleInfo ? (roleInfo[state.lang] || roleInfo.en) : state.user.role;
   document.getElementById('userNameLabel').textContent = state.user.full_name;
 }
 async function route(r, param){
@@ -563,12 +565,14 @@ function switchOrderTab(btn, tab){
   document.getElementById('tab-history').classList.toggle('hidden', tab!=='history');
 }
 
+const SLIDING_CATEGORIES = ['hmst82_xo_ox','hmst82_xox','p4000_x','p4000_xx','p4000_ox','p4000_xox','p4000_fixed_over_xox','p4000_stacked_ox'];
+const HUNG_CATEGORIES = ['hmst82_lower_hung','hmst82_upper_hung'];
 function diagramSVG(category){
   const w=90,h=70;
   let inner = `<rect x="4" y="4" width="${w-8}" height="${h-8}" fill="none" stroke="#1f5fa8" stroke-width="3"/>`;
-  if(category==='casement'||category==='awning'||category==='bay_bow'){
-    inner += `<line x1="12" y1="10" x2="${w/2}" y2="${h/2}" stroke="#96a1ad" stroke-width="1.5"/><line x1="${w-12}" y1="10" x2="${w/2}" y2="${h/2}" stroke="#96a1ad" stroke-width="1.5"/>`;
-  } else if(category==='slider'||category==='patio_door'){
+  if(HUNG_CATEGORIES.includes(category)){
+    inner += `<line x1="4" y1="${h/2}" x2="${w-4}" y2="${h/2}" stroke="#96a1ad" stroke-width="1.5"/>`;
+  } else if(SLIDING_CATEGORIES.includes(category)){
     inner += `<line x1="${w/2}" y1="4" x2="${w/2}" y2="${h-4}" stroke="#96a1ad" stroke-width="1.5"/><polyline points="18,${h/2} 10,${h/2-6} 10,${h/2+6} 18,${h/2}" fill="none" stroke="#96a1ad"/>`;
   } else if(category==='custom_shape'){
     inner = `<path d="M4,${h-4} L4,20 A${w/2-4},20 0 0 1 ${w-4},20 L${w-4},${h-4} Z" fill="none" stroke="#1f5fa8" stroke-width="3"/>`;
@@ -600,9 +604,13 @@ function renderItemCard(o, it){
     `;
   }
   const locked = calc.status==='approved';
+  const dimBits = [`${it.width}×${it.height}${it.unit}`];
+  if(it.dimO!=null) dimBits.push(`O=${it.dimO}${it.unit}`);
+  if(it.dimS!=null) dimBits.push(`S=${it.dimS}${it.unit}`);
+  if(it.dimT!=null) dimBits.push(`T=${it.dimT}${it.unit}`);
   return `<div class="itemCard">
     <div class="itemHead">
-      <h4>${esc(it.itemNo)} — ${esc(productLabel(it.category))} <span class="small">(${it.width}×${it.height}${it.unit} × ${t('item.qty')} ${it.quantity})</span></h4>
+      <h4>${esc(it.itemNo)} — ${esc(productLabel(it.category))} <span class="small">(${dimBits.join(', ')} × ${t('item.qty')} ${it.quantity})</span></h4>
       <div class="flexRow noPrint">
         ${statusBadge}
         ${canEdit() && !locked ?`<button class="btn ghost" onclick="openItemModal('${o.id}','${it.itemNo}')">${t('item.edit')}</button>`:''}
@@ -622,17 +630,25 @@ function renderItemCard(o, it){
       </div>
       <div>${calcActionsHtml}</div>
     </div>
-    ${(calc.results || calc.error) ? renderCalcTable(calc) : ''}
+    ${(calc.results || calc.error) ? renderCalcTable(calc, it.category) : ''}
   </div>`;
 }
-function renderCalcTable(calc){
+function renderCalcTable(calc, category){
   if(calc.error) return `<div class="banner error" style="margin-top:10px;">${esc(calc.error)}</div>`;
   let html = '';
   if(calc.warnings && calc.warnings.length) html += calc.warnings.map(w=>`<div class="banner warn" style="margin-top:10px;">⚠ ${esc(w)}</div>`).join('');
-  html += `<table class="calcTable" style="margin-top:10px;"><thead><tr><th>${t('th.component')}</th><th>${t('th.widthMm')}</th><th>${t('th.heightMm')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>
-    ${calc.results.map(c=>`<tr><td>${esc(state.lang==='zh'?c.labelZh:c.label)}</td><td class="num">${c.w}</td><td class="num">${c.h}</td><td class="num">${c.qtyEach}</td><td class="num">${c.totalQty}</td></tr>`).join('')}
-    </tbody></table>
-    <div class="small" style="margin-top:4px;">${t('calc.formulaVersion')} ${calc.formulaVersion} · ${t('calc.calculatedBy')} ${esc(calc.calculatedBy)} ${t('calc.on')} ${fmtDateTime(calc.calculatedAt)}. ${t('calc.sampleNote')}</div>`;
+  if(calc.scalesWithQty===false) html += `<div class="banner warn" style="margin-top:10px;">⚠ ${t('calc.upperHungQtyWarning')}</div>`;
+  html += `<table class="calcTable" style="margin-top:10px;"><thead><tr><th>${t('th.component')}</th><th>${t('th.cutLength')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>
+    ${calc.results.map(c=>`<tr><td>${esc(state.lang==='zh'?c.labelZh:c.label)}${c.code&&c.code!=='TBD'?` <span class="tag">${esc(c.code)}</span>`:''}</td><td class="num">${c.length}</td><td class="num">${c.qtyEach}</td><td class="num">${c.totalQty}</td></tr>`).join('')}
+    </tbody></table>`;
+  if(calc.glass && calc.glass.length){
+    html += `<table class="calcTable" style="margin-top:8px;"><thead><tr><th>${t('th.glass')}</th><th>${t('th.widthMm')}</th><th>${t('th.heightMm')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>
+    ${calc.glass.map(g=>`<tr><td>${esc(state.lang==='zh'?g.labelZh:g.label)}</td><td class="num">${g.widthDisplay}</td><td class="num">${g.heightDisplay}</td><td class="num">${g.qtyEach}</td><td class="num">${g.totalQty}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+  if(calc.areaM2!=null) html += `<div class="small" style="margin-top:4px;"><b>${t('calc.areaLabel')}:</b> ${calc.areaM2} m²</div>`;
+  const noteKey = category==='custom_shape' ? 'calc.sampleNote' : 'calc.verifiedNote';
+  html += `<div class="small" style="margin-top:4px;">${t('calc.formulaVersion')} ${calc.formulaVersion} · ${t('calc.calculatedBy')} ${esc(calc.calculatedBy)} ${t('calc.on')} ${fmtDateTime(calc.calculatedAt)}. ${t(noteKey)}</div>`;
   return html;
 }
 
@@ -644,12 +660,13 @@ function openItemModal(orderId, itemNo){
   document.getElementById('modalBody').innerHTML = `
     <div class="grid cols-3">
       <div class="field"><label>${t('form.category')}</label>
-        <select id="i_category" onchange="refreshDiagramPreview()">${PRODUCT_TYPES.map(p=>`<option value="${p.id}" ${it?.category===p.id?'selected':''}>${esc(pname(p))}</option>`).join('')}</select></div>
-      <div class="field"><label>${t('form.width')}</label><input type="number" id="i_width" value="${it?.width||''}"></div>
-      <div class="field"><label>${t('form.height')}</label><input type="number" id="i_height" value="${it?.height||''}"></div>
+        <select id="i_category" onchange="refreshItemFormFields()">${PRODUCT_TYPES.map(p=>`<option value="${p.id}" ${it?.category===p.id?'selected':''}>${esc(pname(p))}</option>`).join('')}</select></div>
+      <div class="field"><label id="lbl_width">${t('form.width')}</label><input type="number" id="i_width" value="${it?.width||''}" oninput="refreshAutoO()"></div>
+      <div class="field"><label id="lbl_height">${t('form.height')}</label><input type="number" id="i_height" value="${it?.height||''}"></div>
       <div class="field"><label>${t('form.qty')}</label><input type="number" id="i_qty" value="${it?.quantity||1}"></div>
+      <div id="dimExtra" style="display:contents;"></div>
       <div class="field"><label>${t('form.openingStyle')}</label><select id="i_opening">${optionsHtml(OPENING_STYLES, it?.openingStyle)}</select></div>
-      <div class="field"><label>${t('form.frameSystem')}</label><input id="i_frame" value="${esc(it?.frameSystem||'Series 88 Vinyl')}"></div>
+      <div class="field"><label>${t('form.frameSystem')}</label><input id="i_frame" value="${esc(it?.frameSystem||'')}"></div>
       <div class="field"><label>${t('form.glassType')}</label><select id="i_glass">${optionsHtml(GLASS_TYPES, it?.glassType)}</select></div>
       <div class="field"><label>${t('form.glassThickness')}</label><input id="i_glassThick" value="${esc(it?.glassThickness||'24mm IGU')}"></div>
       <div class="field"><label>${t('form.colour')}</label><select id="i_color">${optionsHtml(COLORS, it?.color)}</select></div>
@@ -667,19 +684,49 @@ function openItemModal(orderId, itemNo){
     <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
     <button class="btn" onclick="saveItem('${orderId}','${itemNo||''}')">${t('common.save')}</button>`;
   openModal();
-  refreshDiagramPreview();
+  refreshItemFormFields(it);
 }
-function refreshDiagramPreview(){
+function refreshItemFormFields(it){
   const cat = document.getElementById('i_category').value;
+  const cfg = CATEGORY_CONFIG[cat] || {unit:'mm', dims:[]};
+  document.getElementById('lbl_width').textContent = tf('form.width', {unit:cfg.unit});
+  document.getElementById('lbl_height').textContent = tf('form.height', {unit:cfg.unit});
+  let html = '';
+  if(cfg.dims.includes('O')){
+    html += cfg.oAuto
+      ? `<div class="field"><label>${tf('form.dimOAuto',{unit:cfg.unit})}</label><input id="i_dimO" value="${it?.dimO ?? ''}" disabled></div>`
+      : `<div class="field"><label>${tf('form.dimO',{unit:cfg.unit})}</label><input type="number" id="i_dimO" value="${it?.dimO ?? ''}"></div>`;
+  }
+  if(cfg.dims.includes('S')) html += `<div class="field"><label>${tf('form.dimS',{unit:cfg.unit})}</label><input type="number" id="i_dimS" value="${it?.dimS ?? ''}"></div>`;
+  if(cfg.dims.includes('T')) html += `<div class="field"><label>${tf('form.dimT',{unit:cfg.unit})}</label><input type="number" id="i_dimT" value="${it?.dimT ?? ''}"></div>`;
+  document.getElementById('dimExtra').innerHTML = html;
+  refreshAutoO();
   document.getElementById('diagramPreview').innerHTML = diagramSVG(cat);
 }
+function refreshAutoO(){
+  const cat = document.getElementById('i_category').value;
+  const cfg = CATEGORY_CONFIG[cat];
+  const oInput = document.getElementById('i_dimO');
+  if(cfg && cfg.oAuto && oInput){
+    const w = Number(document.getElementById('i_width').value)||0;
+    oInput.value = w ? (w/2).toFixed(4) : '';
+  }
+}
 async function saveItem(orderId, itemNo){
+  const category = document.getElementById('i_category').value;
+  const cfg = CATEGORY_CONFIG[category] || {unit:'mm', dims:[]};
   const width = Number(document.getElementById('i_width').value);
   const height = Number(document.getElementById('i_height').value);
   const qty = Number(document.getElementById('i_qty').value)||1;
   if(!width || !height){ alert(t('alert.widthHeightRequired')); return; }
+  const dimO = cfg.dims.includes('O') ? Number(document.getElementById('i_dimO').value)||null : null;
+  const dimS = cfg.dims.includes('S') ? Number(document.getElementById('i_dimS').value)||null : null;
+  const dimT = cfg.dims.includes('T') ? Number(document.getElementById('i_dimT').value)||null : null;
+  if(cfg.dims.includes('O') && !cfg.oAuto && !dimO){ alert(t('alert.widthHeightRequired')); return; }
+  if(cfg.dims.includes('S') && !dimS){ alert(t('alert.widthHeightRequired')); return; }
+  if(cfg.dims.includes('T') && !dimT){ alert(t('alert.widthHeightRequired')); return; }
   const data = {
-    category: document.getElementById('i_category').value, width, height, quantity: qty,
+    category, width, height, unit: cfg.unit, dimO, dimS, dimT, quantity: qty,
     frameSystem: document.getElementById('i_frame').value.trim(), openingStyle: document.getElementById('i_opening').value,
     glassType: document.getElementById('i_glass').value, glassThickness: document.getElementById('i_glassThick').value.trim(),
     color: document.getElementById('i_color').value, screenType: document.getElementById('i_screen').value,
@@ -690,7 +737,8 @@ async function saveItem(orderId, itemNo){
   try{
     if(itemNo){
       const it = findItem(itemNo);
-      const measurementsChanged = it.width!==data.width || it.height!==data.height || it.category!==data.category;
+      const measurementsChanged = it.width!==data.width || it.height!==data.height || it.category!==data.category
+        || it.dimO!==data.dimO || it.dimS!==data.dimS || it.dimT!==data.dimT;
       await D.updateItem(orderId, it.id, itemNo, data, measurementsChanged);
     } else {
       await D.createItem(orderId, currentOrder.items.length, data);
@@ -708,7 +756,8 @@ async function duplicateItem(orderId, itemNo){
 async function runCalculation(orderId, itemNo){
   try{
     const it = findItem(itemNo);
-    const res = C.calcComponents(it.category, it.width, it.height, it.quantity, state.formulas);
+    const dims = { W: it.width, H: it.height, O: it.dimO, S: it.dimS, T: it.dimT };
+    const res = C.calcComponents(it.category, dims, it.quantity, state.formulas);
     await D.runCalculation(orderId, it, res);
     route('order-detail', orderId);
   }catch(err){ alert(err.message); }
@@ -889,15 +938,26 @@ async function generateFactorySheet(orderId){
   const showEn = lang==='en'||lang==='both', showZh = lang==='zh'||lang==='both';
   const label = (en,zh) => showEn&&showZh? `${en} / ${zh}` : showZh ? zh : en;
 
-  let itemsHtml = approved.map(it=>`
+  let itemsHtml = approved.map(it=>{
+    const dimBits = [`${it.width}×${it.height}${it.unit}`];
+    if(it.dimO!=null) dimBits.push(`O=${it.dimO}${it.unit}`);
+    if(it.dimS!=null) dimBits.push(`S=${it.dimS}${it.unit}`);
+    if(it.dimT!=null) dimBits.push(`T=${it.dimT}${it.unit}`);
+    const qtyWarning = it.calc.scalesWithQty===false ? `<div class="small" style="color:var(--red);">⚠ ${label('Quantities below do NOT scale with the order quantity — verify piece counts manually.','以下数量不会随订单数量翻倍 — 请人工核实件数。')}</div>` : '';
+    return `
     <h4 style="margin:16px 0 4px;color:var(--navy);">${esc(it.itemNo)} — ${esc(showEn?PRODUCT_TYPES.find(p=>p.id===it.category)?.en||it.category:'')}${showEn&&showZh?' / ':''}${esc(showZh?productLabel(it.category):'')}</h4>
-    <div class="small">${label('Original size','原始尺寸')}: ${it.width} × ${it.height} mm &nbsp; | &nbsp; ${label('Qty','数量')}: ${it.quantity} &nbsp; | &nbsp; ${label('Opening','开启方式')}: ${esc(label(opt2en(OPENING_STYLES,it.openingStyle),opt2zh(OPENING_STYLES,it.openingStyle)))} &nbsp; | &nbsp; ${label('Colour','颜色')}: ${esc(label(opt2en(COLORS,it.color),opt2zh(COLORS,it.color)))}</div>
-    <div class="small">${label('Glass','玻璃')}: ${esc(label(opt2en(GLASS_TYPES,it.glassType),opt2zh(GLASS_TYPES,it.glassType)))} (${esc(it.glassThickness)}) &nbsp; | &nbsp; ${label('Screen','纱窗')}: ${esc(label(opt2en(SCREEN_TYPES,it.screenType),opt2zh(SCREEN_TYPES,it.screenType)))} &nbsp; | &nbsp; ${label('Hardware','五金')}: ${esc(label(opt2en(HARDWARE,it.hardware),opt2zh(HARDWARE,it.hardware)))}</div>
+    <div class="small">${label('Original size','原始尺寸')}: ${dimBits.join(', ')} &nbsp; | &nbsp; ${label('Qty','数量')}: ${it.quantity} &nbsp; | &nbsp; ${label('Colour','颜色')}: ${esc(label(opt2en(COLORS,it.color),opt2zh(COLORS,it.color)))}</div>
+    <div class="small">${label('Screen','纱窗')}: ${esc(label(opt2en(SCREEN_TYPES,it.screenType),opt2zh(SCREEN_TYPES,it.screenType)))} &nbsp; | &nbsp; ${label('Hardware','五金')}: ${esc(label(opt2en(HARDWARE,it.hardware),opt2zh(HARDWARE,it.hardware)))}</div>
     ${it.specialOptions?`<div class="small"><b>${label('Special instructions','特殊说明')}:</b> ${esc(it.specialOptions)}</div>`:''}
-    <table><thead><tr><th>${label('Component','部件')}</th><th>${label('Width (mm)','宽度(mm)')}</th><th>${label('Height (mm)','高度(mm)')}</th><th>${label('Qty/unit','每件数量')}</th><th>${label('Total Qty','总数量')}</th></tr></thead>
-    <tbody>${it.calc.results.map(c=>`<tr><td>${label(c.label,c.labelZh)}</td><td>${c.w}</td><td>${c.h}</td><td>${c.qtyEach}</td><td>${c.totalQty}</td></tr>`).join('')}</tbody></table>
+    ${qtyWarning}
+    <table><thead><tr><th>${label('Code','代码')}</th><th>${label('Component','部件')}</th><th>${label('Cut Length (mm)','下料长度(mm)')}</th><th>${label('Qty/unit','每件数量')}</th><th>${label('Total Qty','总数量')}</th></tr></thead>
+    <tbody>${(it.calc.results||[]).map(c=>`<tr><td>${c.code&&c.code!=='TBD'?esc(c.code):'—'}</td><td>${label(c.label,c.labelZh)}</td><td>${c.length}</td><td>${c.qtyEach}</td><td>${c.totalQty}</td></tr>`).join('')}</tbody></table>
+    ${it.calc.glass && it.calc.glass.length ? `
+    <table style="margin-top:6px;"><thead><tr><th>${label('Glass','玻璃')}</th><th>${label('Width','宽度')}</th><th>${label('Height','高度')}</th><th>${label('Qty/unit','每件数量')}</th><th>${label('Total Qty','总数量')}</th></tr></thead>
+    <tbody>${it.calc.glass.map(g=>`<tr><td>${label(g.label,g.labelZh)}</td><td>${g.widthDisplay}"</td><td>${g.heightDisplay}"</td><td>${g.qtyEach}</td><td>${g.totalQty}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${it.calc.areaM2!=null ? `<div class="small">${label('Area','面积')}: ${it.calc.areaM2} m²</div>` : ''}
     <div class="small">${label('Approved by','批准人')}: ${esc(it.calc.approvedBy)} · ${fmtDateTime(it.calc.approvedAt)} · ${label('Formula version','公式版本')} ${it.calc.formulaVersion}</div>
-  `).join('') || `<div class="small">${label('No approved items on this order yet.','此订单尚无已批准项目。')}</div>`;
+  `;}).join('') || `<div class="small">${label('No approved items on this order yet.','此订单尚无已批准项目。')}</div>`;
 
   const sheet = `
     <div class="fsheet">
@@ -920,7 +980,7 @@ async function generateFactorySheet(orderId){
       </div>
       ${notApproved.length? `<div class="banner warn">${notApproved.length} ${label('item(s) excluded — not yet approved','个项目已排除 — 尚未批准')}: ${notApproved.map(i=>esc(i.itemNo)).join(', ')}</div>`:''}
       ${itemsHtml}
-      <div class="footNote">${label('Document version','文档版本')} ${version}. ${label('This document uses sample placeholder calculation formulas — not for actual production use until formulas are verified.','本文档使用示例占位计算公式 — 在公式核实之前不得用于实际生产。')}</div>
+      <div class="footNote">${label('Document version','文档版本')} ${version}. ${label('Cut formulas verified against Home Fortune\'s own cut-list workbooks. Custom Shape items still require individual engineering review.','下料公式已与家福自己的下料表核对无误。异形窗项目仍需单独工程审核。')}</div>
     </div>`;
   document.getElementById('printSheet').innerHTML = sheet;
 
@@ -958,11 +1018,13 @@ function switchFormulaAdminTab(tab){ formulaAdminTab = tab; route('formulas'); }
 function renderMaterialFormulasTab(){
   const rows = PRODUCT_TYPES.map(p=>{
     const f = state.formulas[p.id];
+    const unit = (CATEGORY_CONFIG[p.id]||{unit:'mm'}).unit;
+    const range = (min,max) => (min==null && max==null) ? t('common.na') : `${min ?? '—'}–${max ?? '—'} ${unit}`;
     return `<tr>
       <td>${esc(pname(p))}<div class="small">${esc(state.lang==='zh'?p.en:p.zh)}</div></td>
       <td>${f.active? `<span class="badge done">${t('formulas.active')}</span>` : `<span class="badge hold">${t('formulas.inactive')}</span>`}</td>
       <td>v${f.version}</td>
-      <td>${f.minW}–${f.maxW} mm</td><td>${f.minH}–${f.maxH} mm</td>
+      <td>${range(f.minW,f.maxW)}</td><td>${range(f.minH,f.maxH)}</td>
       <td class="small">${esc(f.changedBy)}<br>${fmtDateTime(f.changedAt)}</td>
       <td><button class="btn ghost" onclick="openFormulaModal('${p.id}')">${t('common.edit')}</button></td>
     </tr>`;
@@ -1092,27 +1154,26 @@ async function saveModifiers(){
 function openFormulaModal(typeId){
   const f = state.formulas[typeId];
   const p = PRODUCT_TYPES.find(x=>x.id===typeId);
-  const dKeys = Object.keys(f.deductions);
+  const cfg = CATEGORY_CONFIG[typeId] || {unit:'mm', dims:[]};
   document.getElementById('modalTitle').textContent = `${t('formulas.edit')} — ${pname(p)}`;
   document.getElementById('modalBody').innerHTML = `
+    <div class="banner info">${t('formulas.codeDefinedNote')}</div>
     <div class="grid cols-2">
       <div class="field"><label>${t('formulas.active')}</label><select id="ff_active"><option value="1" ${f.active?'selected':''}>${t('formulas.active')}</option><option value="0" ${!f.active?'selected':''}>${t('formulas.inactive')}</option></select></div>
       <div class="field"><label>${t('formulas.version')}</label><input value="v${f.version} ${t('formulas.autoIncrement')}" disabled></div>
-      <div class="field"><label>${t('formulas.minWidth')}</label><input type="number" id="ff_minW" value="${f.minW}"></div>
-      <div class="field"><label>${t('formulas.maxWidth')}</label><input type="number" id="ff_maxW" value="${f.maxW}"></div>
-      <div class="field"><label>${t('formulas.minHeight')}</label><input type="number" id="ff_minH" value="${f.minH}"></div>
-      <div class="field"><label>${t('formulas.maxHeight')}</label><input type="number" id="ff_maxH" value="${f.maxH}"></div>
+      <div class="field"><label>${tf('formulas.minWidth',{unit:cfg.unit})}</label><input type="number" id="ff_minW" value="${f.minW ?? ''}"></div>
+      <div class="field"><label>${tf('formulas.maxWidth',{unit:cfg.unit})}</label><input type="number" id="ff_maxW" value="${f.maxW ?? ''}"></div>
+      <div class="field"><label>${tf('formulas.minHeight',{unit:cfg.unit})}</label><input type="number" id="ff_minH" value="${f.minH ?? ''}"></div>
+      <div class="field"><label>${tf('formulas.maxHeight',{unit:cfg.unit})}</label><input type="number" id="ff_maxH" value="${f.maxH ?? ''}"></div>
     </div>
-    <fieldset><legend>${t('formulas.deductions')}</legend>
-      <div class="grid cols-3">
-        ${dKeys.map(k=>`<div class="field"><label>${k}</label><input type="number" step="0.1" id="ffd_${k}" value="${f.deductions[k]}"></div>`).join('') || `<div class="small">${t('formulas.noDeductions')}</div>`}
-      </div>
-    </fieldset>
     <fieldset><legend>${t('formulas.testFormula')}</legend>
       <div class="grid cols-3">
-        <div class="field"><label>${t('formulas.testWidth')}</label><input type="number" id="ff_testW" value="900"></div>
-        <div class="field"><label>${t('formulas.testHeight')}</label><input type="number" id="ff_testH" value="1200"></div>
+        <div class="field"><label>${tf('form.width',{unit:cfg.unit})}</label><input type="number" id="ff_testW" value=""></div>
+        <div class="field"><label>${tf('form.height',{unit:cfg.unit})}</label><input type="number" id="ff_testH" value=""></div>
         <div class="field"><label>${t('formulas.testQty')}</label><input type="number" id="ff_testQ" value="1"></div>
+        ${cfg.dims.includes('O')?`<div class="field"><label>${tf('form.dimO',{unit:cfg.unit})}</label><input type="number" id="ff_testO" value=""></div>`:''}
+        ${cfg.dims.includes('S')?`<div class="field"><label>${tf('form.dimS',{unit:cfg.unit})}</label><input type="number" id="ff_testS" value=""></div>`:''}
+        ${cfg.dims.includes('T')?`<div class="field"><label>${tf('form.dimT',{unit:cfg.unit})}</label><input type="number" id="ff_testT" value=""></div>`:''}
       </div>
       <button class="btn secondary" type="button" onclick="testFormula('${typeId}')">${t('formulas.runTest')}</button>
       <div id="ff_testResult" style="margin-top:10px;"></div>
@@ -1129,26 +1190,32 @@ function openFormulaModal(typeId){
   });
 }
 function collectFormulaDraft(typeId){
-  const f = state.formulas[typeId];
-  const dKeys = Object.keys(f.deductions);
-  const deductions = {};
-  dKeys.forEach(k=> deductions[k] = Number(document.getElementById('ffd_'+k).value));
   return {
     active: document.getElementById('ff_active').value==='1',
-    minW: Number(document.getElementById('ff_minW').value), maxW: Number(document.getElementById('ff_maxW').value),
-    minH: Number(document.getElementById('ff_minH').value), maxH: Number(document.getElementById('ff_maxH').value),
-    deductions
+    minW: document.getElementById('ff_minW').value===''?null:Number(document.getElementById('ff_minW').value),
+    maxW: document.getElementById('ff_maxW').value===''?null:Number(document.getElementById('ff_maxW').value),
+    minH: document.getElementById('ff_minH').value===''?null:Number(document.getElementById('ff_minH').value),
+    maxH: document.getElementById('ff_maxH').value===''?null:Number(document.getElementById('ff_maxH').value),
   };
 }
 function testFormula(typeId){
   const draft = collectFormulaDraft(typeId);
   const tempFormulas = JSON.parse(JSON.stringify(state.formulas));
   tempFormulas[typeId] = {...tempFormulas[typeId], ...draft, version: tempFormulas[typeId].version};
-  const w = Number(document.getElementById('ff_testW').value), h = Number(document.getElementById('ff_testH').value), q = Number(document.getElementById('ff_testQ').value);
-  const res = C.calcComponents(typeId, w, h, q, tempFormulas);
+  const dims = {
+    W: Number(document.getElementById('ff_testW').value),
+    H: Number(document.getElementById('ff_testH').value),
+    O: document.getElementById('ff_testO') ? Number(document.getElementById('ff_testO').value) : undefined,
+    S: document.getElementById('ff_testS') ? Number(document.getElementById('ff_testS').value) : undefined,
+    T: document.getElementById('ff_testT') ? Number(document.getElementById('ff_testT').value) : undefined,
+  };
+  const q = Number(document.getElementById('ff_testQ').value)||1;
+  const res = C.calcComponents(typeId, dims, q, tempFormulas);
   document.getElementById('ff_testResult').innerHTML = res.ok ?
     (res.warnings.length? res.warnings.map(w=>`<div class="banner warn">${esc(w)}</div>`).join(''):'') +
-    `<table class="calcTable"><thead><tr><th>${t('th.component')}</th><th>${t('th.widthMm')}</th><th>${t('th.heightMm')}</th></tr></thead><tbody>${res.components.map(c=>`<tr><td>${esc(state.lang==='zh'?c.labelZh:c.label)}</td><td class="num">${c.w}</td><td class="num">${c.h}</td></tr>`).join('')}</tbody></table>`
+    `<table class="calcTable"><thead><tr><th>${t('th.component')}</th><th>${t('th.cutLength')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>${res.components.map(c=>`<tr><td>${esc(state.lang==='zh'?c.labelZh:c.label)}</td><td class="num">${c.length}</td><td class="num">${c.qtyEach}</td><td class="num">${c.totalQty}</td></tr>`).join('')}</tbody></table>`
+      + (res.glass ? `<table class="calcTable" style="margin-top:8px;"><thead><tr><th>${t('th.glass')}</th><th>${t('th.widthMm')}</th><th>${t('th.heightMm')}</th></tr></thead><tbody>${res.glass.map(g=>`<tr><td>${esc(state.lang==='zh'?g.labelZh:g.label)}</td><td class="num">${g.widthDisplay}</td><td class="num">${g.heightDisplay}</td></tr>`).join('')}</tbody></table>` : '')
+      + (res.areaM2!=null ? `<div class="small" style="margin-top:6px;">Area: ${res.areaM2} m²</div>` : '')
     : `<div class="banner error">${esc(res.error)}</div>`;
 }
 async function saveFormula(typeId){
@@ -1190,7 +1257,7 @@ Object.assign(window, {
   openClientModal, saveClient, checkDup, filterClientTable, toggleArchivedClients, archiveClient, restoreClient,
   openOrderModal, saveOrder, applyOrderFilters, calPrevMonth, calNextMonth, calGoToday,
   toggleArchivedOrders, archiveOrder, restoreOrder,
-  openItemModal, saveItem, refreshDiagramPreview, duplicateItem, runCalculation, approveCalc, reopenCalc,
+  openItemModal, saveItem, refreshItemFormFields, refreshAutoO, duplicateItem, runCalculation, approveCalc, reopenCalc,
   switchOrderTab,
   updateQuoteRates, updateManualTotal, sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
   openFactorySheet, generateFactorySheet, printFactorySheet, markSentToFactory,
