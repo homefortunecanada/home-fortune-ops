@@ -781,24 +781,29 @@ async function reopenCalc(orderId, itemNo){
 
 /* ================= CLIENT QUOTE ================= */
 function renderQuoteSummary(o){
-  if(o.items.length===0){
+  const manualItems = o.quote.manualItems || [];
+  if(o.items.length===0 && manualItems.length===0 && !canEdit()){
     return `<div class="card"><h3 style="margin-top:0;font-size:14.5px;color:var(--navy);">${t('quote.title')}</h3><div class="small">${t('quote.addItemsFirst')}</div></div>`;
   }
   const live = C.computeOrderQuoteLive(o.items, state.pricing);
+  const manualItemsTotalCents = C.computeManualItemsTotal(manualItems);
   const q = o.quote;
-  const discountCents = Math.round(live.subtotalCents * (q.discountPct||0)/100);
-  const taxableCents = live.subtotalCents - discountCents;
+  const subtotalCents = live.subtotalCents + manualItemsTotalCents;
+  const discountCents = Math.round(subtotalCents * (q.discountPct||0)/100);
+  const taxableCents = subtotalCents - discountCents;
   const taxCents = Math.round(taxableCents * (q.taxPct||0)/100);
   const calculatedTotalCents = taxableCents + taxCents;
   const hasOverride = q.manualTotalCents!=null;
   const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
+  const locked = q.status==='approved';
 
   const rows = live.results.map(r=> r.q.ok
     ? `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))} (${r.item.width}×${r.item.height}mm × ${r.item.quantity})</td><td class="num">$${C.fmtCents(r.q.unitCents)}</td><td class="num">$${C.fmtCents(r.q.lineTotalCents)}</td></tr>`
     : `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))}</td><td colspan="2" class="small" style="color:var(--red);">${t('quote.manualQuoteRequired')}</td></tr>`
   ).join('');
-
-  const locked = q.status==='approved';
+  const manualRows = manualItems.map(mi => `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td>
+    <td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}
+    ${canEdit()&&!locked?` <button class="btn ghost" style="padding:2px 6px;" onclick="removeManualItem('${o.id}','${mi.id}')">✕</button>`:''}</td></tr>`).join('');
   const isStaleApproved = locked && o.items.some(it=>C.isQuoteStaleForItem(q,it,state.pricing));
 
   let statusHtml;
@@ -806,12 +811,13 @@ function renderQuoteSummary(o){
   else if(q.status==='sent') statusHtml = `<span class="badge progress">${t('quote.statusSent')}</span> <span class="small">${t('quote.sentOn')} ${fmtDateTime(q.sentAt)} ${t('quote.by')} ${esc(q.sentBy)}</span>`;
   else statusHtml = `<span class="badge done">🔒 ${t('quote.statusApproved')}</span> <span class="small">${t('quote.approvedOn')} ${fmtDateTime(q.approvedAt)} ${t('quote.by')} ${esc(q.approvedBy)}</span>`;
 
+  const nothingToQuote = (live.results.length===0 || live.results.every(r=>!r.q.ok)) && manualItems.length===0;
   let actionsHtml = '';
   if(canEdit()){
     if(isStaleApproved){
       actionsHtml = `<div class="banner warn">⚠ ${t('quote.outOfDate')}</div><button class="btn" onclick="sendQuoteToClient('${o.id}')">${t('quote.sendToClient')}</button>`;
     } else if(q.status==='draft'){
-      actionsHtml = `<button class="btn" onclick="sendQuoteToClient('${o.id}')" ${live.results.every(r=>!r.q.ok)?'disabled':''}>${t('quote.sendToClient')}</button>`;
+      actionsHtml = `<button class="btn" onclick="sendQuoteToClient('${o.id}')" ${nothingToQuote?'disabled':''}>${t('quote.sendToClient')}</button>`;
     } else if(q.status==='sent'){
       actionsHtml = `<button class="btn secondary" onclick="sendQuoteToClient('${o.id}')">${t('quote.sendToClient')} (${t('common.edit')})</button>
         <button class="btn" style="background:var(--green);margin-left:6px;" onclick="openApprovalModal('${o.id}')">${t('quote.recordApproval')}</button>`;
@@ -826,10 +832,17 @@ function renderQuoteSummary(o){
       <div>${statusHtml}</div>
     </div>
     ${live.excludedCount>0 ? `<div class="banner warn" style="margin-top:10px;">${live.excludedCount} ${t('quote.excludedItems')}</div>` : ''}
-    <table style="margin-top:10px;"><thead><tr><th>${t('order.windowsProducts')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead>
-    <tbody>${rows}</tbody></table>
+    ${o.items.length>0 ? `<table style="margin-top:10px;"><thead><tr><th>${t('order.windowsProducts')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead>
+    <tbody>${rows}</tbody></table>` : ''}
+    <div class="flexRow" style="justify-content:space-between;margin-top:14px;">
+      <h4 style="margin:0;font-size:13px;color:var(--navy);">${t('quote.manualItemsTitle')}</h4>
+      ${canEdit()&&!locked?`<button class="btn ghost" onclick="openManualItemModal('${o.id}')">${t('quote.addManualItem')}</button>`:''}
+    </div>
+    ${manualItems.length>0
+      ? `<table style="margin-top:6px;"><thead><tr><th>${t('quote.manualItemDesc')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead><tbody>${manualRows}</tbody></table>`
+      : `<div class="small" style="margin-top:4px;">${t('quote.noManualItems')}</div>`}
     <div class="grid cols-3" style="margin-top:12px;">
-      <div class="small"><b>${t('quote.subtotal')}:</b> $${C.fmtCents(live.subtotalCents)}</div>
+      <div class="small"><b>${t('quote.subtotal')}:</b> $${C.fmtCents(subtotalCents)}</div>
       <div class="field" style="margin:0;"><label>${t('quote.discountPctLabel')}</label>
         <input type="number" min="0" max="100" step="0.5" value="${q.discountPct||0}" ${locked?'disabled':''} onchange="updateQuoteRates('${o.id}','discountPct',this.value)"></div>
       <div class="field" style="margin:0;"><label>${t('quote.taxPctLabel')}</label>
@@ -856,23 +869,62 @@ async function updateManualTotal(orderId, value){
     route('order-detail', orderId);
   }catch(err){ alert(err.message); }
 }
+function openManualItemModal(orderId){
+  document.getElementById('modalTitle').textContent = t('quote.addManualItem');
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>${t('quote.manualItemDesc')}</label><input id="mi_desc" value=""></div>
+    <div class="grid cols-2">
+      <div class="field"><label>${t('quote.manualItemPrice')}</label><input type="number" min="0" step="0.01" id="mi_price" value=""></div>
+      <div class="field"><label>${t('quote.manualItemQty')}</label><input type="number" min="1" step="1" id="mi_qty" value="1"></div>
+    </div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
+    <button class="btn" onclick="saveManualItem('${orderId}')">${t('common.save')}</button>`;
+  openModal();
+}
+async function saveManualItem(orderId){
+  const description = document.getElementById('mi_desc').value.trim();
+  const unitPrice = Number(document.getElementById('mi_price').value);
+  const quantity = Number(document.getElementById('mi_qty').value)||1;
+  if(!description || !(unitPrice>0)){ alert(t('alert.widthHeightRequired')); return; }
+  try{
+    const items = [...(currentOrder.quote.manualItems||[]), {
+      id: crypto.randomUUID(), description, unitPriceCents: Math.round(unitPrice*100), quantity,
+    }];
+    await D.saveManualItems(orderId, items);
+    closeModal(); route('order-detail', orderId);
+  }catch(err){ alert(err.message); }
+}
+async function removeManualItem(orderId, itemId){
+  if(!confirm(t('confirm.removeManualItem'))) return;
+  try{
+    const items = (currentOrder.quote.manualItems||[]).filter(i=>i.id!==itemId);
+    await D.saveManualItems(orderId, items);
+    route('order-detail', orderId);
+  }catch(err){ alert(err.message); }
+}
 async function sendQuoteToClient(orderId){
   try{
     const o = currentOrder;
     const live = C.computeOrderQuoteLive(o.items, state.pricing);
+    const manualItems = o.quote.manualItems || [];
+    const manualItemsTotalCents = C.computeManualItemsTotal(manualItems);
     const q = o.quote;
-    const discountCents = Math.round(live.subtotalCents * (q.discountPct||0)/100);
-    const taxableCents = live.subtotalCents - discountCents;
+    const subtotalCents = live.subtotalCents + manualItemsTotalCents;
+    const discountCents = Math.round(subtotalCents * (q.discountPct||0)/100);
+    const taxableCents = subtotalCents - discountCents;
     const taxCents = Math.round(taxableCents * (q.taxPct||0)/100);
     const calculatedTotalCents = taxableCents + taxCents;
     const hasOverride = q.manualTotalCents!=null;
     const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
     const snapshot = {
-      subtotalCents: live.subtotalCents, discountPct:q.discountPct||0, taxPct:q.taxPct||0,
+      subtotalCents, discountPct:q.discountPct||0, taxPct:q.taxPct||0,
       discountCents, taxCents, calculatedTotalCents, manualTotalCents: hasOverride?q.manualTotalCents:null, totalCents,
       generatedAt: new Date().toISOString(),
       items: live.results.map(r=>({itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height,
-        quantity:r.item.quantity, ok:r.q.ok, unitCents:r.q.ok?r.q.unitCents:null, lineTotalCents:r.q.ok?r.q.lineTotalCents:null}))
+        quantity:r.item.quantity, ok:r.q.ok, unitCents:r.q.ok?r.q.unitCents:null, lineTotalCents:r.q.ok?r.q.lineTotalCents:null})),
+      manualItems,
     };
     const nextStatus = ['New Inquiry','Measurement Required','Measurements Completed','Quote In Progress'].includes(o.status) ? 'Customer Approval Required' : null;
     const manualTotalDollars = hasOverride ? q.manualTotalCents/100 : null;
@@ -1044,9 +1096,13 @@ async function generateInvoice(orderId){
         ? `<tr><td>${desc}</td><td class="num">$${C.fmtCents(s.unitCents)}</td><td class="num">$${C.fmtCents(s.lineTotalCents)}</td></tr>`
         : `<tr><td>${desc}</td><td colspan="2" class="small" style="color:var(--red);">${label('Manual quote required','需要手动报价')}</td></tr>`;
     });
+    (snap.manualItems||[]).forEach(mi => lineRows.push(
+      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td><td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}</td></tr>`));
   } else {
     const live = C.computeOrderQuoteLive(o.items, state.pricing);
-    subtotalCents = live.subtotalCents; discountPct = q.discountPct||0; taxPct = q.taxPct||0;
+    const manualItems = o.quote.manualItems || [];
+    const manualItemsTotalCents = C.computeManualItemsTotal(manualItems);
+    subtotalCents = live.subtotalCents + manualItemsTotalCents; discountPct = q.discountPct||0; taxPct = q.taxPct||0;
     discountCents = Math.round(subtotalCents*discountPct/100);
     const taxableCents = subtotalCents-discountCents;
     taxCents = Math.round(taxableCents*taxPct/100);
@@ -1055,6 +1111,8 @@ async function generateInvoice(orderId){
     lineRows = live.results.map(r=> r.q.ok
       ? `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))} (${r.item.width}×${r.item.height}${r.item.unit} × ${r.item.quantity})</td><td class="num">$${C.fmtCents(r.q.unitCents)}</td><td class="num">$${C.fmtCents(r.q.lineTotalCents)}</td></tr>`
       : `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))}</td><td colspan="2" class="small" style="color:var(--red);">${label('Manual quote required','需要手动报价')}</td></tr>`);
+    manualItems.forEach(mi => lineRows.push(
+      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td><td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}</td></tr>`));
   }
   const depositCents = Math.round((Number(o.deposit)||0)*100);
   const balanceDueCents = totalCents - depositCents;
@@ -1360,7 +1418,8 @@ Object.assign(window, {
   toggleArchivedOrders, archiveOrder, restoreOrder,
   openItemModal, saveItem, refreshItemFormFields, refreshAutoO, duplicateItem, runCalculation, approveCalc, reopenCalc,
   switchOrderTab,
-  updateQuoteRates, updateManualTotal, sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
+  updateQuoteRates, updateManualTotal, openManualItemModal, saveManualItem, removeManualItem,
+  sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
   openFactorySheet, generateFactorySheet, printDocument, markSentToFactory,
   openInvoiceModal, generateInvoice,
   switchFormulaAdminTab, openFormulaModal, testFormula, saveFormula,

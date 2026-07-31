@@ -268,10 +268,11 @@ function mapItemRow(row){
   };
 }
 function mapQuoteRow(orderId, row){
-  if(!row) return { orderId, status:'draft', discountPct:0, taxPct:5, manualTotalCents:null, snapshot:null, sentBy:null, sentAt:null, approvedBy:null, approvedAt:null, approvalNote:'' };
+  if(!row) return { orderId, status:'draft', discountPct:0, taxPct:5, manualTotalCents:null, manualItems:[], snapshot:null, sentBy:null, sentAt:null, approvedBy:null, approvedAt:null, approvalNote:'' };
   return {
     orderId, status: row.status, discountPct: Number(row.discount_pct)||0, taxPct: Number(row.tax_pct)||0,
     manualTotalCents: row.manual_total!=null ? Math.round(Number(row.manual_total)*100) : null,
+    manualItems: row.manual_items || [],
     snapshot: row.snapshot, sentBy: profileName(row.sent_by), sentAt: row.sent_at,
     approvedBy: row.approved_by, approvedAt: row.approved_at, approvalNote: row.approval_note||'',
   };
@@ -414,6 +415,9 @@ export async function updateQuoteRates(orderId, field, value){
 }
 export async function updateManualTotal(orderId, dollarsOrNull){
   await call(supabase.from('order_quotes').update({ manual_total: dollarsOrNull }).eq('order_id', orderId));
+}
+export async function saveManualItems(orderId, items){
+  await call(supabase.from('order_quotes').update({ manual_items: items }).eq('order_id', orderId));
 }
 export async function sendQuoteToClient(orderId, snapshot, discountPct, taxPct, manualTotalDollarsOrNull, orderStatus){
   await call(supabase.from('order_quotes').update({

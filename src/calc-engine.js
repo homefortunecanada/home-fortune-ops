@@ -337,3 +337,10 @@ export function isQuoteStaleForItem(quote, it, pricing){
   return live.lineTotalCents !== snap.lineTotalCents;
 }
 export function fmtCents(cents){ return (cents/100).toFixed(2); }
+
+// Ad-hoc priced line items on a quote (installation labour, a manually
+// engineered product, delivery, etc.) that aren't calculated from a window
+// item. Each: {id, description, unitPriceCents, quantity}.
+export function computeManualItemsTotal(items){
+  return (items||[]).reduce((s,i)=> s + (Number(i.unitPriceCents)||0) * (Number(i.quantity)||1), 0);
+}

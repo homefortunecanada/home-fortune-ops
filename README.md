@@ -12,7 +12,10 @@ The **factory sheet** (production-facing, no pricing) and the **invoice**
 their own version counter and audit trail. The invoice uses the order's
 sent/approved quote snapshot when one exists (frozen totals, including any
 manual price override), or live totals with a "PROVISIONAL" banner
-otherwise.
+otherwise. A quote can also include **manually priced line items**
+(installation labour, a one-off charge, a manually engineered product) —
+"+ Add Manual Item" under Client Quote on the order page — which flow into
+the quote subtotal and the invoice the same as calculated window items.
 
 Plain HTML/CSS/JS, no build step. Backed by Supabase (Postgres + Auth) via
 `supabase-js` loaded straight from a CDN as an ES module.
@@ -121,6 +124,8 @@ documented at the top of the file):
 5. `005_invoice_version.sql` — adds the version counter the invoice feature
    uses (mirrors the existing factory-sheet version). **Required** for the
    Invoice button on an order to work.
+6. `006_manual_quote_line_items.sql` — adds storage for ad-hoc priced quote
+   line items. **Required** for "+ Add Manual Item" under Client Quote.
 
 ## Known gaps / next steps
 

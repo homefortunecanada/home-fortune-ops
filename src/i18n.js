@@ -154,6 +154,10 @@ export const I18N = {
     'quote.sentOn':'Sent','quote.approvedOn':'Approved','quote.by':'by','quote.discountPctLabel':'Discount %','quote.taxPctLabel':'Tax %',
     'quote.sampleNote':'Pricing shown uses SAMPLE placeholder rates — not real Home Fortune pricing yet. See Formula Admin.',
     'quote.manualOverrideLabel':'Override final price ($, optional)','quote.manualOverrideNote':'Manually set — replaces the calculated total below (which was ${calc}).',
+    'quote.manualItemsTitle':'Manually Priced Items','quote.addManualItem':'+ Add Manual Item','quote.editManualItem':'Edit Manual Item',
+    'quote.manualItemDesc':'Description *','quote.manualItemPrice':'Unit price ($) *','quote.manualItemQty':'Quantity',
+    'quote.noManualItems':'No manually priced items on this quote yet.','common.remove':'Remove',
+    'confirm.removeManualItem':'Remove this manually priced item from the quote?',
     'quote.reopenConfirm':'Reopen this approved quote for editing? Any approved material calculations on this order will be reset to draft and will need to be recalculated once the quote is re-approved. This should only be done by an authorized administrator.',
 
     'formulas.tabMaterials':'Material Formulas','formulas.tabPricing':'Quote Pricing',
@@ -328,6 +332,10 @@ export const I18N = {
     'quote.sentOn':'发送时间','quote.approvedOn':'批准时间','quote.by':'由','quote.discountPctLabel':'折扣 %','quote.taxPctLabel':'税率 %',
     'quote.sampleNote':'所示价格为示例占位费率 — 并非家福门窗的真实价格。详见公式管理。',
     'quote.manualOverrideLabel':'手动设置最终价格 ($，可选)','quote.manualOverrideNote':'已手动设置 — 将替代下方计算总额（原计算值为 ${calc}）。',
+    'quote.manualItemsTitle':'手动计价项目','quote.addManualItem':'+ 添加手动项目','quote.editManualItem':'编辑手动项目',
+    'quote.manualItemDesc':'说明 *','quote.manualItemPrice':'单价 ($) *','quote.manualItemQty':'数量',
+    'quote.noManualItems':'此报价尚无手动计价项目。','common.remove':'移除',
+    'confirm.removeManualItem':'确定要从报价中移除该手动计价项目吗？',
     'quote.reopenConfirm':'确定要重新打开这个已批准的报价以进行编辑吗？此订单上所有已批准的物料计算都将被重置为草稿状态，并需要在报价重新批准后重新计算。此操作应仅由授权管理员执行。',
 
     'formulas.tabMaterials':'物料计算公式','formulas.tabPricing':'报价定价',
