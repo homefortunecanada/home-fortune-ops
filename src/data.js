@@ -101,17 +101,72 @@ function mapModifiersRow(row){
   return {
     version: row.version, glass: row.glass||{}, color: row.color||{}, screen: row.screen||{},
     hardware: row.hardware||{}, gridSurcharge: Number(row.grid_surcharge)||0,
+    installFeeCents: Math.round(Number(row.install_fee||0)*100),
     changedBy: profileName(row.changed_by), changedAt: row.changed_at,
   };
 }
+function mapRateRow(row, priceField){
+  return {
+    id: row.id, labelEn: row.label_en, labelZh: row.label_zh,
+    ratePerSqFt: priceField==='rate' ? Number(row.rate_per_sqft) : undefined,
+    flatPriceCents: priceField==='flat' ? Math.round(Number(row.flat_price)*100) : undefined,
+    active: row.active, version: row.version,
+    changedById: row.changed_by, changedBy: profileName(row.changed_by), changedAt: row.changed_at,
+  };
+}
 export async function loadPricing(){
-  const [products, modifiers] = await Promise.all([
+  const [products, modifiers, frameTypes, glassTypes, patioDoors] = await Promise.all([
     call(supabase.from('pricing_products').select('*')),
     call(supabase.from('pricing_modifiers').select('*').eq('id',1).single()),
+    call(supabase.from('pricing_frame_types').select('*').order('id')),
+    call(supabase.from('pricing_glass_types').select('*').order('id')),
+    call(supabase.from('pricing_patio_doors').select('*').order('id')),
   ]);
   const productsMap = {};
   products.forEach(r => productsMap[r.product_type] = mapPricingProductRow(r));
-  state.pricing = { products: productsMap, modifiers: mapModifiersRow(modifiers) };
+  const frameTypesMap = {}; frameTypes.forEach(r => frameTypesMap[r.id] = mapRateRow(r,'rate'));
+  const glassTypesMap = {}; glassTypes.forEach(r => glassTypesMap[r.id] = mapRateRow(r,'rate'));
+  const patioDoorsMap = {}; patioDoors.forEach(r => patioDoorsMap[r.id] = mapRateRow(r,'flat'));
+  state.pricing = {
+    products: productsMap, modifiers: mapModifiersRow(modifiers),
+    frameTypes: frameTypesMap, glassTypes: glassTypesMap, patioDoors: patioDoorsMap,
+  };
+}
+export async function loadFrameTypeHistory(id){
+  const rows = await call(supabase.from('pricing_frame_types').select('version,changed_by,changed_at').eq('id', id));
+  return rows.map(r => ({version:r.version, by:profileName(r.changed_by), at:r.changed_at}));
+}
+export async function saveFrameType(id, draft){
+  await call(supabase.from('pricing_frame_types').update({
+    active: draft.active, rate_per_sqft: draft.ratePerSqFt,
+    version: state.pricing.frameTypes[id].version + 1, changed_by: state.user.id, changed_at: new Date().toISOString(),
+  }).eq('id', id));
+  await insertActivity('updatedFrameType', { id });
+  await loadPricing();
+}
+export async function saveGlassType(id, draft){
+  await call(supabase.from('pricing_glass_types').update({
+    active: draft.active, rate_per_sqft: draft.ratePerSqFt,
+    version: state.pricing.glassTypes[id].version + 1, changed_by: state.user.id, changed_at: new Date().toISOString(),
+  }).eq('id', id));
+  await insertActivity('updatedGlassType', { id });
+  await loadPricing();
+}
+export async function savePatioDoorPrice(id, draft){
+  await call(supabase.from('pricing_patio_doors').update({
+    active: draft.active, flat_price: draft.flatPrice,
+    version: state.pricing.patioDoors[id].version + 1, changed_by: state.user.id, changed_at: new Date().toISOString(),
+  }).eq('id', id));
+  await insertActivity('updatedPatioDoorPrice', { id });
+  await loadPricing();
+}
+export async function saveInstallFee(dollars){
+  const m = state.pricing.modifiers;
+  await call(supabase.from('pricing_modifiers').update({
+    install_fee: dollars, version: m.version+1, changed_by: state.user.id, changed_at: new Date().toISOString(),
+  }).eq('id', 1));
+  await insertActivity('updatedInstallFee', {});
+  await loadPricing();
 }
 export async function loadPricingProductHistory(productType){
   const rows = await call(supabase.from('pricing_product_history').select('*').eq('product_type', productType).order('version', {ascending:false}));
@@ -131,16 +186,6 @@ export async function saveProductPricing(productType, draft){
     price_per_sqft: draft.pricePerSqFt, changed_by: state.user.id, changed_at: new Date().toISOString(),
   }).eq('product_type', productType));
   await insertActivity('updatedPricingProduct', { type: productType, v: current.version + 1 });
-  await loadPricing();
-}
-export async function saveModifiers(draft){
-  const current = state.pricing.modifiers;
-  await call(supabase.from('pricing_modifiers').update({
-    glass: draft.glass, color: draft.color, screen: draft.screen, hardware: draft.hardware,
-    grid_surcharge: draft.gridSurcharge, version: current.version + 1,
-    changed_by: state.user.id, changed_at: new Date().toISOString(),
-  }).eq('id', 1));
-  await insertActivity('updatedPricingModifiers', { v: current.version + 1 });
   await loadPricing();
 }
 
@@ -258,7 +303,7 @@ function mapItemRow(row){
     unit: row.unit||'mm', quantity: row.quantity, frameSystem: row.frame_system||'', openingStyle: row.opening_style||'',
     glassType: row.glass_type||'', glassThickness: row.glass_thickness||'', color: row.color||'',
     screenType: row.screen_type||'', hardware: row.hardware||'', grid: row.grid||'', specialOptions: row.special_options||'',
-    installNotes: row.install_notes||'', room: row.room||'', notes: row.notes||'',
+    installNotes: row.install_notes||'', room: row.room||'', notes: row.notes||'', installRequested: !!row.install_requested,
     calc: {
       status: row.calc_status, results: cr.components || null, glass: cr.glass || null, areaM2: cr.areaM2 ?? null,
       scalesWithQty: cr.scalesWithQty !== false, warnings: cr.warnings || [], error: cr.error || null,
@@ -346,7 +391,7 @@ export async function createItem(orderId, existingCount, data){
       unit: data.unit, quantity: data.quantity, frame_system: data.frameSystem, opening_style: data.openingStyle,
       glass_type: data.glassType, glass_thickness: data.glassThickness, color: data.color, screen_type: data.screenType,
       hardware: data.hardware, grid: data.grid, special_options: data.specialOptions, install_notes: data.installNotes,
-      room: data.room, notes: data.notes,
+      room: data.room, notes: data.notes, install_requested: !!data.installRequested,
     }).select().single();
     if(!error){ await pushHistory(orderId, 'addedItem', {item:itemNo}); return itemNo; }
     if(error.code === '23505'){ attempt++; continue; } // item_no collision, retry with next number
@@ -361,7 +406,7 @@ export async function updateItem(orderId, itemId, itemNo, data, measurementsChan
     frame_system: data.frameSystem, opening_style: data.openingStyle, glass_type: data.glassType,
     glass_thickness: data.glassThickness, color: data.color, screen_type: data.screenType, hardware: data.hardware,
     grid: data.grid, special_options: data.specialOptions, install_notes: data.installNotes, room: data.room,
-    notes: data.notes, updated_at: new Date().toISOString(),
+    notes: data.notes, install_requested: !!data.installRequested, updated_at: new Date().toISOString(),
   };
   if(measurementsChanged){
     Object.assign(patch, { calc_status:'draft', calc_results:null, calc_formula_version:null, calc_by:null, calc_at:null, calc_approved_by:null, calc_approved_at:null });
@@ -381,6 +426,7 @@ export async function duplicateItem(orderId, srcItem, existingCount){
       glass_type: srcItem.glassType, glass_thickness: srcItem.glassThickness, color: srcItem.color,
       screen_type: srcItem.screenType, hardware: srcItem.hardware, grid: srcItem.grid,
       special_options: srcItem.specialOptions, install_notes: srcItem.installNotes, room: srcItem.room, notes: srcItem.notes,
+      install_requested: !!srcItem.installRequested,
     });
     if(!error){ await pushHistory(orderId, 'duplicatedItem', {src:srcItem.itemNo, item:itemNo}); return itemNo; }
     if(error.code === '23505'){ attempt++; continue; }

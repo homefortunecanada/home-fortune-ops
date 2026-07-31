@@ -20,7 +20,7 @@
 //
 // The quote/pricing engine (dollar amounts) is unrelated to this file and
 // still uses SAMPLE placeholder rates — see Formula Admin.
-import { t, tf, opt, GLASS_TYPES, COLORS, SCREEN_TYPES, HARDWARE, CATEGORY_CONFIG } from './i18n.js';
+import { t, tf, CATEGORY_CONFIG } from './i18n.js';
 
 const IN_TO_MM = 25.4;
 
@@ -290,38 +290,53 @@ export function calcComponents(category, dims, qty, formulas){
   return { ok:true, warnings, components, glass, areaM2, formulaVersion:f.version, scalesWithQty: calc.scalesWithQty, oValue: result.O };
 }
 
-/* ================= quote (pricing) engine — unrelated to material calc above ================= */
+/* ================= quote (pricing) engine — real Home Fortune pricing ================= */
+// Verified against Home_Fortune_Pricing_Workbook.xlsx. A window's size price
+// is (frame rate + glass rate, both independently-chosen $/sq ft) x area in
+// sq ft, compared against a per-configuration minimum charge — whichever is
+// higher is charged — plus an optional flat installation fee per window.
+// Patio doors are flat-priced (no size math); door installation is not
+// charged (explicitly unconfirmed in the source workbook).
 // Returns {ok, lines:[{key,label,cents}], unitCents, lineTotalCents, version, error}
 export function computeQuoteLine(item, pricing){
+  const cfg = CATEGORY_CONFIG[item.category] || {};
+
+  if(cfg.kind === 'door'){
+    const door = pricing.patioDoors[cfg.doorId];
+    if(!door || !door.active) return {ok:false, error:t('quote.error.inactive')};
+    const unitCents = door.flatPriceCents;
+    const lineTotalCents = unitCents * (Number(item.quantity)||1);
+    return {ok:true, lines:[{key:'door', label:t('quote.doorPrice'), cents:unitCents}], unitCents, lineTotalCents, version:door.version};
+  }
+
   const prod = pricing.products[item.category];
   if(!prod || !prod.active){
     return {ok:false, error: item.category==='custom_shape' ? t('quote.error.custom') : t('quote.error.inactive')};
   }
+  const frame = pricing.frameTypes[item.frameSystem];
+  if(!frame || !frame.active) return {ok:false, error:t('quote.error.selectFrame')};
+  const glass = pricing.glassTypes[item.glassType];
+  if(!glass || !glass.active) return {ok:false, error:t('quote.error.selectGlass')};
   const W = Number(item.width), H = Number(item.height);
   if(!W || !H || W<=0 || H<=0) return {ok:false, error:t('calc.error.badnum')};
   // area for pricing purposes only; item.unit is 'in' for HMST82, 'mm' for 4000
   const areaSqFt = item.unit === 'in' ? (W*H)/144 : (W/304.8) * (H/304.8);
-  const m = pricing.modifiers;
-  const baseCents = Math.round(prod.basePrice*100);
-  const sizeCents = Math.round(prod.pricePerSqFt*100*areaSqFt);
-  const glassCents = Math.round((m.glass[item.glassType]||0)*100);
-  const colorCents = Math.round((m.color[item.color]||0)*100);
-  const screenCents = Math.round((m.screen[item.screenType]||0)*100);
-  const hardwareCents = Math.round((m.hardware[item.hardware]||0)*100);
-  const hasGrid = item.grid && item.grid.trim() && item.grid.trim().toLowerCase()!=='none';
-  const gridCents = hasGrid ? Math.round(m.gridSurcharge*100) : 0;
+  const combinedRate = frame.ratePerSqFt + glass.ratePerSqFt;
+  const sizeCents = Math.round(combinedRate*100*areaSqFt);
+  const minimumCents = Math.round(prod.basePrice*100);
+  const usedMinimum = minimumCents > sizeCents;
+  const productCents = Math.max(sizeCents, minimumCents);
+  const installCents = item.installRequested ? (pricing.modifiers.installFeeCents||0) : 0;
+
   const lines = [
-    {key:'base', label:t('quote.basePrice'), cents:baseCents},
-    {key:'size', label:tf('quote.sizeArea',{w:W,h:H,area:areaSqFt.toFixed(2),unit:item.unit||'mm'}), cents:sizeCents},
+    {key:'size', label:tf('quote.sizeArea',{w:W,h:H,area:areaSqFt.toFixed(2),unit:item.unit||'mm'})+` (${frame.labelEn} $${frame.ratePerSqFt}/sqft + ${glass.labelEn} $${glass.ratePerSqFt}/sqft)`, cents:sizeCents},
   ];
-  if(glassCents) lines.push({key:'glass', label:t('quote.glassUpgrade')+': '+opt(GLASS_TYPES,item.glassType), cents:glassCents});
-  if(colorCents) lines.push({key:'color', label:t('quote.colourUpgrade')+': '+opt(COLORS,item.color), cents:colorCents});
-  if(screenCents) lines.push({key:'screen', label:t('quote.screenUpgrade')+': '+opt(SCREEN_TYPES,item.screenType), cents:screenCents});
-  if(hardwareCents) lines.push({key:'hardware', label:t('quote.hardwareUpgrade')+': '+opt(HARDWARE,item.hardware), cents:hardwareCents});
-  if(gridCents) lines.push({key:'grid', label:t('quote.gridSurcharge'), cents:gridCents});
-  const unitCents = lines.reduce((s,l)=>s+l.cents,0);
+  if(usedMinimum) lines.push({key:'minimum', label:t('quote.minimumApplied'), cents:minimumCents-sizeCents});
+  if(installCents) lines.push({key:'install', label:t('quote.installFeeLine'), cents:installCents});
+
+  const unitCents = productCents + installCents;
   const lineTotalCents = unitCents * (Number(item.quantity)||1);
-  return {ok:true, lines, unitCents, lineTotalCents, version:pricing.version};
+  return {ok:true, lines, unitCents, lineTotalCents, version:prod.version, usedMinimum};
 }
 export function computeOrderQuoteLive(items, pricing){
   const results = items.map(it => ({item:it, q: computeQuoteLine(it, pricing)}));

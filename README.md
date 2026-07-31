@@ -27,10 +27,15 @@ line-by-line against Home Fortune's own cut-list workbooks
 is an automated regression test using those exact worked examples — run it
 after any change to calc-engine.js.
 
-**Quote/client pricing (dollar amounts) is still SAMPLE placeholder
-values** — editable by an admin under Formula Admin → Quote Pricing. Replace
-with Home Fortune's real price list before sending a client-facing quote for
-real business.
+**Quote/client pricing is real too** — verified against
+`Home_Fortune_Pricing_Workbook.xlsx`. A window's price is
+`MAX((frame rate + glass rate) × sq ft, configuration minimum)`, plus a flat
+$150/window installation fee if requested. Frame type (2 options) and glass
+type (8 options) are chosen per item and each carry their own $/sq ft rate;
+colour/screen/hardware/grid remain on the item as production detail but no
+longer affect price. Patio doors are flat-priced, separate products (no
+material calculation). All editable under Formula Admin → Quote Pricing.
+Sales tax has no global rate — it's set per quote, same as before.
 
 ## Project layout
 
@@ -126,12 +131,23 @@ documented at the top of the file):
    Invoice button on an order to work.
 6. `006_manual_quote_line_items.sql` — adds storage for ad-hoc priced quote
    line items. **Required** for "+ Add Manual Item" under Client Quote.
+7. `007_real_pricing_catalog.sql` — seeds the real frame types, glass types,
+   patio door prices, and window-configuration minimum charges (per
+   `Home_Fortune_Pricing_Workbook.xlsx`), and adds the installation-fee
+   setting and the item-level "include installation?" column. **Required**
+   for any window/door item's price to calculate correctly — without it,
+   every item will show a pricing error.
 
 ## Known gaps / next steps
 
-- **Quote pricing is still placeholder.** Replace it under Formula Admin →
-  Quote Pricing (admin login only) once Home Fortune's real price list is
-  ready — every change is versioned and requires no code changes.
+- **Patio door installation is not charged** — the pricing workbook
+  explicitly flags this as unconfirmed, so the item form doesn't offer an
+  install toggle for doors at all yet. Say the word once you have a real
+  door-install fee and I'll add it.
+- **One door's name is ambiguous in the source workbook**: `DOR-6-LOWE-I89`'s
+  display name says "LowE/689" but its ID says I89 — I went with I89
+  (matching the ID) since the workbook itself flags this as unconfirmed.
+  Double check this is the right glass spec.
 - **Product range limits (min/max width/height) are provisional**, seeded
   with generous common-sense values in migration 004 — the source
   workbooks never specified real manufacturing limits. Update them under

@@ -54,7 +54,7 @@ export const I18N = {
     'order.installNotesLbl':'Installation notes',
 
     'item.opening':'Opening','item.glass':'Glass','item.color':'Colour','item.screen':'Screen','item.hardware':'Hardware',
-    'item.room':'Room','item.edit':'Edit','item.duplicate':'Duplicate','item.calculate':'Calculate','item.recalculate':'Recalculate',
+    'item.room':'Room','item.install':'Installation','item.edit':'Edit','item.duplicate':'Duplicate','item.calculate':'Calculate','item.recalculate':'Recalculate',
     'item.approve':'Approve','item.reopenAdmin':'Reopen (admin)','item.notCalculated':'Not calculated',
     'item.draftNotCalc':'Draft — not yet calculated','item.calcAwaiting':'Calculated — awaiting approval','item.approvedBy':'Approved by',
     'item.qty':'qty','item.addWindow':'Add Window / Product','item.editItem':'Edit Item',
@@ -112,6 +112,8 @@ export const I18N = {
     'common.name':'Full name','common.phone':'Phone','common.email':'Email','common.address':'Address',
     'common.status':'Status','common.notes':'Notes','common.close':'Close','common.approve':'Approve','common.back':'Back',
     'common.print':'Print / Save as PDF','common.calculate':'Calculate','common.confirm':'Confirm','common.na':'—',
+    'common.yes':'Yes','common.no':'No',
+    'quote.doorNote':'Flat-priced patio door — no measurements or material calculation needed. Frame/glass are baked into the door product itself.',
     'common.loading':'Loading…','common.archive':'Archive','common.restore':'Restore','common.archived':'Archived',
     'common.showArchived':'Show archived',
 
@@ -140,6 +142,9 @@ export const I18N = {
 
     'quote.title':'Client Quote','quote.addItemsFirst':'Add windows/products above to generate a quote.',
     'quote.basePrice':'Base price','quote.sizeArea':'Size {w}×{h}{unit} ({area} sq ft)','quote.glassUpgrade':'Glass upgrade',
+    'quote.doorPrice':'Patio door price','quote.error.selectFrame':'Select a frame type for this item.','quote.error.selectGlass':'Select a glass type for this item.',
+    'quote.minimumApplied':'Window minimum charge applied (below calculated size price)','quote.installFeeLine':'Installation',
+    'form.frameType':'Frame type *','form.installRequested':'Include installation? (${fee}/window)',
     'quote.colourUpgrade':'Colour upgrade','quote.screenUpgrade':'Screen upgrade','quote.hardwareUpgrade':'Hardware upgrade',
     'quote.gridSurcharge':'Grid / grille surcharge','quote.estimatedPrice':'Estimated price','quote.perUnit':'per unit',
     'quote.unitPrice':'Unit Price','quote.lineTotal':'Line Total','quote.subtotal':'Subtotal','quote.discount':'Discount (%)',
@@ -161,18 +166,22 @@ export const I18N = {
     'quote.reopenConfirm':'Reopen this approved quote for editing? Any approved material calculations on this order will be reset to draft and will need to be recalculated once the quote is re-approved. This should only be done by an authorized administrator.',
 
     'formulas.tabMaterials':'Material Formulas','formulas.tabPricing':'Quote Pricing',
-    'th.basePrice':'Base Price','th.pricePerSqFt':'Price / sq ft',
-    'pricing.editProduct':'Edit Pricing','pricing.basePriceLbl':'Base price ($)','pricing.perSqFtLbl':'Price per sq ft ($)',
-    'pricing.testTitle':'Test base + size price (feature modifiers not included in this preview)',
-    'pricing.testResultLabel':'Base + size price','pricing.editModifiers':'Edit Feature Modifiers (shared across all products)',
-    'pricing.modifiersDesc':'These add-on amounts apply on top of each product’s base + size price, based on the options selected on each window/product.',
-    'pricing.glassSection':'Glass Type Upgrades ($)','pricing.colorSection':'Colour Upgrades ($)','pricing.screenSection':'Screen Upgrades ($)',
-    'pricing.hardwareSection':'Hardware Upgrades ($)','pricing.gridSurchargeLbl':'Grid / grille surcharge ($, flat — applied whenever a grid option other than None is selected)',
-    'pricing.warnBanner':'⚠ All prices below are SAMPLE placeholder rates. They must be replaced with Home Fortune’s real, approved price list before any client-facing quote is used for real business.',
-    'pricing.editModifiersBtn':'Edit Modifiers','pricing.lastChanged':'Last changed',
+    'th.basePrice':'Base Price','th.pricePerSqFt':'Price / sq ft','th.ratePerSqFt':'Rate ($/sq ft)','th.minimumCharge':'Minimum Charge','th.flatPrice':'Flat Price',
+    'pricing.realNote':'Real Home Fortune pricing, verified against Home_Fortune_Pricing_Workbook.xlsx. A window\'s price is (frame rate + glass rate) × sq ft, or the configuration minimum, whichever is higher — plus installation if requested. Sales tax is not set globally; adjust it per quote.',
+    'pricing.frameTypesTitle':'Frame Types ($/sq ft)','pricing.glassTypesTitle':'Glass Types ($/sq ft)',
+    'pricing.minimumsTitle':'Window Configuration Minimum Charges','pricing.minimumsDesc':'The floor price for each window configuration — charged instead of the size-based price whenever the size price would be lower.',
+    'pricing.doorsTitle':'Patio Door Prices (flat, per door)','pricing.installFeeTitle':'Installation Fee','pricing.perWindow':'per installed window',
+    'pricing.editMinimum':'Edit Minimum Charge','pricing.minimumChargeLbl':'Minimum charge ($)',
+    'pricing.testMinimumTitle':'Test minimum vs. size price','pricing.testCombinedRate':'Test combined frame+glass rate ($/sq ft)',
+    'pricing.testResultLabel':'Price charged',
+    'pricing.editFrameType':'Edit Frame Type','pricing.editGlassType':'Edit Glass Type','pricing.editDoor':'Edit Patio Door Price',
+    'pricing.ratePerSqFtLbl':'Rate ($ per sq ft)','pricing.flatPriceLbl':'Flat price ($)','pricing.installFeeLbl':'Installation fee ($ per window)',
+    'pricing.lastChanged':'Last changed',
 
     'act.sentQuote':'Sent quote to client — total ${total}','act.approvedQuote':'Quote approved by {by}','act.reopenedQuote':'Reopened quote (admin) — material calculations reset',
     'act.updatedPricingProduct':'Updated pricing for {type} to v{v}','act.updatedPricingModifiers':'Updated feature pricing modifiers to v{v}',
+    'act.updatedFrameType':'Updated frame type pricing for {id}','act.updatedGlassType':'Updated glass type pricing for {id}',
+    'act.updatedPatioDoorPrice':'Updated patio door price for {id}','act.updatedInstallFee':'Updated installation fee',
     'act.archivedClient':'Archived client {name}','act.restoredClient':'Restored client {name}',
     'act.archivedOrder':'Archived order {no}','act.restoredOrder':'Restored order {no}',
 
@@ -232,7 +241,7 @@ export const I18N = {
     'order.installNotesLbl':'安装备注',
 
     'item.opening':'开启方式','item.glass':'玻璃','item.color':'颜色','item.screen':'纱窗','item.hardware':'五金',
-    'item.room':'房间','item.edit':'编辑','item.duplicate':'复制','item.calculate':'计算','item.recalculate':'重新计算',
+    'item.room':'房间','item.install':'安装','item.edit':'编辑','item.duplicate':'复制','item.calculate':'计算','item.recalculate':'重新计算',
     'item.approve':'批准','item.reopenAdmin':'重新打开（管理员）','item.notCalculated':'尚未计算',
     'item.draftNotCalc':'草稿 — 尚未计算','item.calcAwaiting':'已计算 — 等待批准','item.approvedBy':'批准人',
     'item.qty':'数量','item.addWindow':'添加窗户/产品','item.editItem':'编辑项目',
@@ -290,6 +299,8 @@ export const I18N = {
     'common.name':'姓名','common.phone':'电话','common.email':'邮箱','common.address':'地址',
     'common.status':'状态','common.notes':'备注','common.close':'关闭','common.approve':'批准','common.back':'返回',
     'common.print':'打印 / 保存为PDF','common.calculate':'计算','common.confirm':'确认','common.na':'—',
+    'common.yes':'是','common.no':'否',
+    'quote.doorNote':'固定价露台门 — 无需测量或物料计算，窗框/玻璃已包含在门产品本身内。',
     'common.loading':'加载中…','common.archive':'归档','common.restore':'恢复','common.archived':'已归档',
     'common.showArchived':'显示已归档',
 
@@ -318,6 +329,9 @@ export const I18N = {
 
     'quote.title':'客户报价','quote.addItemsFirst':'请先在上方添加窗户/产品，然后即可生成报价。',
     'quote.basePrice':'基础价格','quote.sizeArea':'尺寸 {w}×{h}{unit}（{area} 平方英尺）','quote.glassUpgrade':'玻璃升级',
+    'quote.doorPrice':'露台门价格','quote.error.selectFrame':'请为该项目选择窗框类型。','quote.error.selectGlass':'请为该项目选择玻璃类型。',
+    'quote.minimumApplied':'已按窗型最低收费计价（高于计算所得的面积价格）','quote.installFeeLine':'安装费',
+    'form.frameType':'窗框类型 *','form.installRequested':'是否需要安装？（每扇 ${fee}）',
     'quote.colourUpgrade':'颜色升级','quote.screenUpgrade':'纱窗升级','quote.hardwareUpgrade':'五金升级',
     'quote.gridSurcharge':'格条/网格附加费','quote.estimatedPrice':'预估价格','quote.perUnit':'每件',
     'quote.unitPrice':'单价','quote.lineTotal':'小计','quote.subtotal':'小计总额','quote.discount':'折扣 (%)',
@@ -339,18 +353,22 @@ export const I18N = {
     'quote.reopenConfirm':'确定要重新打开这个已批准的报价以进行编辑吗？此订单上所有已批准的物料计算都将被重置为草稿状态，并需要在报价重新批准后重新计算。此操作应仅由授权管理员执行。',
 
     'formulas.tabMaterials':'物料计算公式','formulas.tabPricing':'报价定价',
-    'th.basePrice':'基础价格','th.pricePerSqFt':'每平方英尺价格',
-    'pricing.editProduct':'编辑定价','pricing.basePriceLbl':'基础价格 ($)','pricing.perSqFtLbl':'每平方英尺价格 ($)',
-    'pricing.testTitle':'测试基础价+尺寸价格（此预览不含附加选项）',
-    'pricing.testResultLabel':'基础价+尺寸价格','pricing.editModifiers':'编辑附加选项定价（所有产品共用）',
-    'pricing.modifiersDesc':'这些附加金额将根据每个窗户/产品所选的选项，叠加在该产品的基础价+尺寸价格之上。',
-    'pricing.glassSection':'玻璃类型升级 ($)','pricing.colorSection':'颜色升级 ($)','pricing.screenSection':'纱窗升级 ($)',
-    'pricing.hardwareSection':'五金升级 ($)','pricing.gridSurchargeLbl':'格条/网格附加费（固定金额 — 当选择"无"以外的格条选项时收取）',
-    'pricing.warnBanner':'⚠ 以下所有价格均为示例占位费率。在用于任何面向客户的实际报价之前，必须替换为家福门窗真实、已核准的价目表。',
-    'pricing.editModifiersBtn':'编辑附加选项','pricing.lastChanged':'最后修改',
+    'th.basePrice':'基础价格','th.pricePerSqFt':'每平方英尺价格','th.ratePerSqFt':'单价（$/平方英尺）','th.minimumCharge':'最低收费','th.flatPrice':'固定价格',
+    'pricing.realNote':'家福门窗真实价格，已与 Home_Fortune_Pricing_Workbook.xlsx 核对无误。窗户价格＝（窗框单价＋玻璃单价）×平方英尺，与该窗型最低收费相比取较高者，另加安装费（如需要）。销售税未设全局值，请在每个报价中单独调整。',
+    'pricing.frameTypesTitle':'窗框类型（$/平方英尺）','pricing.glassTypesTitle':'玻璃类型（$/平方英尺）',
+    'pricing.minimumsTitle':'窗型最低收费','pricing.minimumsDesc':'每种窗型的最低收费 — 当面积计价低于此值时，改按此最低收费计价。',
+    'pricing.doorsTitle':'露台门价格（固定，每樘）','pricing.installFeeTitle':'安装费','pricing.perWindow':'每扇安装窗',
+    'pricing.editMinimum':'编辑最低收费','pricing.minimumChargeLbl':'最低收费 ($)',
+    'pricing.testMinimumTitle':'测试最低收费与面积价格','pricing.testCombinedRate':'测试综合窗框+玻璃单价 ($/平方英尺)',
+    'pricing.testResultLabel':'实际收费',
+    'pricing.editFrameType':'编辑窗框类型','pricing.editGlassType':'编辑玻璃类型','pricing.editDoor':'编辑露台门价格',
+    'pricing.ratePerSqFtLbl':'单价（$/平方英尺）','pricing.flatPriceLbl':'固定价格 ($)','pricing.installFeeLbl':'安装费（$/每扇）',
+    'pricing.lastChanged':'最后修改',
 
     'act.sentQuote':'已将报价发送给客户 — 总额 ${total}','act.approvedQuote':'报价已由 {by} 批准','act.reopenedQuote':'已重新打开报价（管理员）— 物料计算已重置',
     'act.updatedPricingProduct':'已将 {type} 的定价更新至第 {v} 版','act.updatedPricingModifiers':'已将附加选项定价更新至第 {v} 版',
+    'act.updatedFrameType':'已更新窗框类型 {id} 的定价','act.updatedGlassType':'已更新玻璃类型 {id} 的定价',
+    'act.updatedPatioDoorPrice':'已更新露台门 {id} 的价格','act.updatedInstallFee':'已更新安装费',
     'act.archivedClient':'已归档客户 {name}','act.restoredClient':'已恢复客户 {name}',
     'act.archivedOrder':'已归档订单 {no}','act.restoredOrder':'已恢复订单 {no}',
 
@@ -404,11 +422,17 @@ export const PRODUCT_TYPES = [
   {id:'p4000_xox', en:'4000 Two Casements + Centre Fixed (XOX)', zh:'4000 平开窗（XOX）'},
   {id:'p4000_fixed_over_xox', en:'4000 Fixed-over-XOX', zh:'4000 平开窗（上固定下XOX）'},
   {id:'p4000_stacked_ox', en:'4000 Stacked Operable/Fixed (O/X)', zh:'4000 平开窗（上下叠加 O/X）'},
-  {id:'custom_shape', en:'Custom Shape (Arch/Specialty)', zh:'异形窗（拱形/特殊）'}
+  {id:'custom_shape', en:'Custom Shape (Arch/Specialty)', zh:'异形窗（拱形/特殊）'},
+  {id:'door_6ft_lowe_i89', en:'Patio Door 6ft — LowE / I89', zh:'六英尺露台门 — LowE／I89'},
+  {id:'door_6ft_lowe_clr', en:'Patio Door 6ft — LowE / Clear', zh:'六英尺露台门 — LowE／透明'},
+  {id:'door_6ft_std', en:'Patio Door 6ft — Standard', zh:'六英尺露台门 — 标准'},
 ];
 // Which extra dimensions each configuration needs beyond width/height, and in
 // what unit the whole item is entered — HMST82 is inches, 4000 is millimetres
 // (matches the source workbooks exactly; do not mix units within a config).
+// kind:'door' items are flat-priced patio doors — no material cut calculation,
+// no frame/glass selection (baked into the product itself); doorId links to
+// the live price in pricing_patio_doors (see data.js loadPricing).
 export const CATEGORY_CONFIG = {
   hmst82_fixed:         { unit:'in', dims:[] },
   hmst82_xo_ox:          { unit:'in', dims:[], oAuto:true },
@@ -422,15 +446,32 @@ export const CATEGORY_CONFIG = {
   p4000_fixed_over_xox:  { unit:'mm', dims:['S','T'] },
   p4000_stacked_ox:      { unit:'mm', dims:['T'] },
   custom_shape:          { unit:'mm', dims:[] },
+  door_6ft_lowe_i89:     { unit:'in', dims:[], kind:'door', doorId:'DOR-6-LOWE-I89' },
+  door_6ft_lowe_clr:     { unit:'in', dims:[], kind:'door', doorId:'DOR-6-LOWE-CLR' },
+  door_6ft_std:          { unit:'in', dims:[], kind:'door', doorId:'DOR-6-STD' },
 };
 // Stored value is always the English string (canonical data); zh is the display label only.
 export const OPENING_STYLES = [
   {en:'Fixed', zh:'固定'}, {en:'Left Hand', zh:'左开'}, {en:'Right Hand', zh:'右开'}, {en:'Top Hinge', zh:'上悬'},
   {en:'2-Panel XO', zh:'两扇推拉(XO)'}, {en:'3-Panel XOX', zh:'三扇推拉(XOX)'}, {en:'Custom', zh:'定制'}
 ];
+// Real Home Fortune glass and frame catalogs (Home_Fortune_Pricing_Workbook.xlsx)
+// — these drive pricing (see pricing_glass_types/pricing_frame_types and
+// calc-engine.js computeQuoteLine), so the stored value is the catalog ID,
+// not the label. Use optById/optionsHtmlById, not opt/optionsHtml, for these.
 export const GLASS_TYPES = [
-  {en:'Double Pane Clear', zh:'双层透明玻璃'}, {en:'Double Pane Low-E', zh:'双层Low-E玻璃'},
-  {en:'Triple Pane Low-E', zh:'三层Low-E玻璃'}, {en:'Tempered Double Pane', zh:'双层钢化玻璃'}, {en:'Obscure/Privacy', zh:'磨砂/隐私玻璃'}
+  {id:'GLS-LOWE-PH', en:'LowE // PinHead', zh:'LowE／针纹玻璃'},
+  {id:'GLS-LOWE-I89', en:'LowE // I89', zh:'LowE／I89'},
+  {id:'GLS-LOWE-T-CT', en:'LowE Temp // Clear Temp', zh:'LowE钢化／透明钢化'},
+  {id:'GLS-CT-CT', en:'Clear Temp // Clear Temp', zh:'透明钢化／透明钢化'},
+  {id:'GLS-PH-CLR', en:'PinHead // Clear', zh:'针纹玻璃／透明玻璃'},
+  {id:'GLS-FR-CLR', en:'Frost // Clear', zh:'磨砂玻璃／透明玻璃'},
+  {id:'GLS-CLR-CLR', en:'Clear // Clear', zh:'透明玻璃／透明玻璃'},
+  {id:'GLS-LOWE-CLR', en:'LowE // Clear', zh:'LowE／透明玻璃'},
+];
+export const FRAME_TYPES = [
+  {id:'FRM-CA-001', en:'Casement / Awning', zh:'平开窗／上悬窗'},
+  {id:'FRM-SR-001', en:'Sliders Reno', zh:'翻新推拉窗'},
 ];
 export const COLORS = [
   {en:'White', zh:'白色'}, {en:'Almond', zh:'杏仁色'}, {en:'Black', zh:'黑色'}, {en:'Dark Bronze', zh:'深青铜色'}, {en:'Woodgrain', zh:'木纹色'}
@@ -452,6 +493,11 @@ export const STATUS_ZH = {
 };
 export function opt(list, val){ const o = list.find(x=>x.en===val); const lang=state.lang||'en'; return o ? (lang==='zh'?o.zh:o.en) : val; }
 export function optionsHtml(list, selected){ const lang=state.lang||'en'; return list.map(o=>`<option value="${esc(o.en)}" ${o.en===selected?'selected':''}>${esc(lang==='zh'?o.zh:o.en)}</option>`).join(''); }
+// Same idea, but the stored/selected value is a catalog ID (list[].id) —
+// use for GLASS_TYPES/FRAME_TYPES, which drive pricing lookups.
+export function optById(list, id){ const o = list.find(x=>x.id===id); const lang=state.lang||'en'; return o ? (lang==='zh'?o.zh:o.en) : (id||''); }
+export function optionsHtmlById(list, selectedId, includeBlank){ const lang=state.lang||'en';
+  return (includeBlank?`<option value="">—</option>`:'') + list.map(o=>`<option value="${esc(o.id)}" ${o.id===selectedId?'selected':''}>${esc(lang==='zh'?o.zh:o.en)}</option>`).join(''); }
 export function statusLabel(s){ const lang=state.lang||'en'; return lang==='zh' ? (STATUS_ZH[s]||s) : s; }
 export function pname(p){ const lang=state.lang||'en'; return lang==='zh' ? p.zh : p.en; }
 export function productLabel(catId){ const p = PRODUCT_TYPES.find(x=>x.id===catId); return p ? pname(p) : catId; }

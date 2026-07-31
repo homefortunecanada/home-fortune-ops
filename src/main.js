@@ -2,8 +2,8 @@ import { state, setLang as setLangState } from './store.js';
 import * as D from './data.js';
 import * as C from './calc-engine.js';
 import {
-  t, tf, actMsg, esc, fmtDate, fmtDateTime, opt, optionsHtml, statusLabel, pname, productLabel, opt2en, opt2zh,
-  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, OPENING_STYLES, GLASS_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
+  t, tf, actMsg, esc, fmtDate, fmtDateTime, opt, optionsHtml, optById, optionsHtmlById, statusLabel, pname, productLabel, opt2en, opt2zh,
+  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, OPENING_STYLES, GLASS_TYPES, FRAME_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
   canEdit, isAdmin,
 } from './i18n.js';
 
@@ -582,14 +582,32 @@ function diagramSVG(category){
 }
 
 function renderItemCard(o, it){
-  const calc = it.calc;
-  const statusBadge = calc.status==='approved' ? `<span class="lockBadge">🔒 ${t('item.approvedBy')} ${esc(calc.approvedBy)} — ${fmtDateTime(calc.approvedAt)}</span>`
-    : calc.status==='calculated' ? `<span class="small" style="color:var(--amber);">${t('item.calcAwaiting')}</span>`
-    : `<span class="small">${t('item.draftNotCalc')}</span>`;
+  const cfg = CATEGORY_CONFIG[it.category] || {};
   const q = C.computeQuoteLine(it, state.pricing);
   const priceHtml = q.ok
     ? `<div><b>${t('quote.estimatedPrice')}:</b> $${C.fmtCents(q.unitCents)} ${t('quote.perUnit')} · <b>${t('quote.lineTotal')}: $${C.fmtCents(q.lineTotalCents)}</b></div>`
     : `<div class="small" style="color:var(--red);">${esc(q.error)}</div>`;
+
+  if(cfg.kind === 'door'){
+    return `<div class="itemCard">
+      <div class="itemHead">
+        <h4>${esc(it.itemNo)} — ${esc(productLabel(it.category))} <span class="small">(${t('item.qty')} ${it.quantity})</span></h4>
+        <div class="flexRow noPrint">
+          ${canEdit()?`<button class="btn ghost" onclick="openItemModal('${o.id}','${it.itemNo}')">${t('item.edit')}</button>`:''}
+          ${canEdit()?`<button class="btn ghost" onclick="duplicateItem('${o.id}','${it.itemNo}')">${t('item.duplicate')}</button>`:''}
+        </div>
+      </div>
+      <div class="small">
+        <div><b>${t('item.room')}:</b> ${esc(it.room)||t('common.na')}</div>
+        ${priceHtml}
+      </div>
+    </div>`;
+  }
+
+  const calc = it.calc;
+  const statusBadge = calc.status==='approved' ? `<span class="lockBadge">🔒 ${t('item.approvedBy')} ${esc(calc.approvedBy)} — ${fmtDateTime(calc.approvedAt)}</span>`
+    : calc.status==='calculated' ? `<span class="small" style="color:var(--amber);">${t('item.calcAwaiting')}</span>`
+    : `<span class="small">${t('item.draftNotCalc')}</span>`;
   const quoteApproved = o.quote && o.quote.status==='approved';
   const quoteStale = quoteApproved && C.isQuoteStaleForItem(o.quote, it, state.pricing);
   const quoteReady = quoteApproved && !quoteStale;
@@ -622,11 +640,12 @@ function renderItemCard(o, it){
       <div class="diagram">${diagramSVG(it.category)}</div>
       <div class="small">
         <div><b>${t('item.opening')}:</b> ${esc(opt(OPENING_STYLES,it.openingStyle))}</div>
-        <div><b>${t('item.glass')}:</b> ${esc(opt(GLASS_TYPES,it.glassType))} (${esc(it.glassThickness)})</div>
+        <div><b>${t('item.glass')}:</b> ${esc(optById(GLASS_TYPES,it.glassType))} (${esc(it.glassThickness)})</div>
         <div><b>${t('item.color')}:</b> ${esc(opt(COLORS,it.color))}</div>
         <div><b>${t('item.screen')}:</b> ${esc(opt(SCREEN_TYPES,it.screenType))}</div>
         <div><b>${t('item.hardware')}:</b> ${esc(opt(HARDWARE,it.hardware))}</div>
         <div><b>${t('item.room')}:</b> ${esc(it.room)||t('common.na')}</div>
+        <div><b>${t('item.install')}:</b> ${it.installRequested?t('common.yes'):t('common.no')}</div>
         ${priceHtml}
       </div>
       <div>${calcActionsHtml}</div>
@@ -655,6 +674,7 @@ function renderCalcTable(calc, category){
 
 function findItem(itemNo){ return currentOrder.items.find(i=>i.itemNo===itemNo); }
 
+const DOOR_WIDTH_IN = 71.5, DOOR_HEIGHT_IN = 79.5; // nominal patio door size, per pricing workbook notes
 function openItemModal(orderId, itemNo){
   const it = itemNo ? findItem(itemNo) : null;
   document.getElementById('modalTitle').textContent = it ? `${t('item.editItem')} — ${it.itemNo}` : t('item.addWindow');
@@ -662,24 +682,13 @@ function openItemModal(orderId, itemNo){
     <div class="grid cols-3">
       <div class="field"><label>${t('form.category')}</label>
         <select id="i_category" onchange="refreshItemFormFields()">${PRODUCT_TYPES.map(p=>`<option value="${p.id}" ${it?.category===p.id?'selected':''}>${esc(pname(p))}</option>`).join('')}</select></div>
-      <div class="field"><label id="lbl_width">${t('form.width')}</label><input type="number" id="i_width" value="${it?.width||''}" oninput="refreshAutoO()"></div>
-      <div class="field"><label id="lbl_height">${t('form.height')}</label><input type="number" id="i_height" value="${it?.height||''}"></div>
       <div class="field"><label>${t('form.qty')}</label><input type="number" id="i_qty" value="${it?.quantity||1}"></div>
-      <div id="dimExtra" style="display:contents;"></div>
-      <div class="field"><label>${t('form.openingStyle')}</label><select id="i_opening">${optionsHtml(OPENING_STYLES, it?.openingStyle)}</select></div>
-      <div class="field"><label>${t('form.frameSystem')}</label><input id="i_frame" value="${esc(it?.frameSystem||'')}"></div>
-      <div class="field"><label>${t('form.glassType')}</label><select id="i_glass">${optionsHtml(GLASS_TYPES, it?.glassType)}</select></div>
-      <div class="field"><label>${t('form.glassThickness')}</label><input id="i_glassThick" value="${esc(it?.glassThickness||'24mm IGU')}"></div>
-      <div class="field"><label>${t('form.colour')}</label><select id="i_color">${optionsHtml(COLORS, it?.color)}</select></div>
-      <div class="field"><label>${t('form.screenType')}</label><select id="i_screen">${optionsHtml(SCREEN_TYPES, it?.screenType)}</select></div>
-      <div class="field"><label>${t('form.hardware')}</label><select id="i_hardware">${optionsHtml(HARDWARE, it?.hardware)}</select></div>
-      <div class="field"><label>${t('form.grid')}</label><input id="i_grid" value="${esc(it?.grid||'None')}"></div>
       <div class="field"><label>${t('form.room')}</label><input id="i_room" value="${esc(it?.room||'')}"></div>
     </div>
+    <div id="itemTypeBody"></div>
     <div class="field"><label>${t('form.specialOptions')}</label><input id="i_special" value="${esc(it?.specialOptions||'')}"></div>
     <div class="field"><label>${t('form.installReq')}</label><input id="i_installNotes" value="${esc(it?.installNotes||'')}"></div>
     <div class="field"><label>${t('form.notes')}</label><textarea id="i_notes" rows="2">${esc(it?.notes||'')}</textarea></div>
-    <div id="diagramPreview" class="diagram" style="width:100px;"></div>
   `;
   document.getElementById('modalFoot').innerHTML = `
     <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
@@ -687,22 +696,47 @@ function openItemModal(orderId, itemNo){
   openModal();
   refreshItemFormFields(it);
 }
-function refreshItemFormFields(it){
-  const cat = document.getElementById('i_category').value;
+function itemFormBodyHtml(cat, it){
   const cfg = CATEGORY_CONFIG[cat] || {unit:'mm', dims:[]};
-  document.getElementById('lbl_width').textContent = tf('form.width', {unit:cfg.unit});
-  document.getElementById('lbl_height').textContent = tf('form.height', {unit:cfg.unit});
-  let html = '';
+  if(cfg.kind === 'door'){
+    return `<div class="banner info">${t('quote.doorNote')}</div>`;
+  }
+  let dimExtra = '';
   if(cfg.dims.includes('O')){
-    html += cfg.oAuto
+    dimExtra += cfg.oAuto
       ? `<div class="field"><label>${tf('form.dimOAuto',{unit:cfg.unit})}</label><input id="i_dimO" value="${it?.dimO ?? ''}" disabled></div>`
       : `<div class="field"><label>${tf('form.dimO',{unit:cfg.unit})}</label><input type="number" id="i_dimO" value="${it?.dimO ?? ''}"></div>`;
   }
-  if(cfg.dims.includes('S')) html += `<div class="field"><label>${tf('form.dimS',{unit:cfg.unit})}</label><input type="number" id="i_dimS" value="${it?.dimS ?? ''}"></div>`;
-  if(cfg.dims.includes('T')) html += `<div class="field"><label>${tf('form.dimT',{unit:cfg.unit})}</label><input type="number" id="i_dimT" value="${it?.dimT ?? ''}"></div>`;
-  document.getElementById('dimExtra').innerHTML = html;
-  refreshAutoO();
-  document.getElementById('diagramPreview').innerHTML = diagramSVG(cat);
+  if(cfg.dims.includes('S')) dimExtra += `<div class="field"><label>${tf('form.dimS',{unit:cfg.unit})}</label><input type="number" id="i_dimS" value="${it?.dimS ?? ''}"></div>`;
+  if(cfg.dims.includes('T')) dimExtra += `<div class="field"><label>${tf('form.dimT',{unit:cfg.unit})}</label><input type="number" id="i_dimT" value="${it?.dimT ?? ''}"></div>`;
+  const installFee = C.fmtCents(state.pricing.modifiers.installFeeCents||0);
+  return `
+    <div class="grid cols-3">
+      <div class="field"><label id="lbl_width">${tf('form.width',{unit:cfg.unit})}</label><input type="number" id="i_width" value="${it?.width||''}" oninput="refreshAutoO()"></div>
+      <div class="field"><label id="lbl_height">${tf('form.height',{unit:cfg.unit})}</label><input type="number" id="i_height" value="${it?.height||''}"></div>
+      ${dimExtra}
+      <div class="field"><label>${t('form.openingStyle')}</label><select id="i_opening">${optionsHtml(OPENING_STYLES, it?.openingStyle)}</select></div>
+      <div class="field"><label>${t('form.frameType')}</label><select id="i_frame">${optionsHtmlById(FRAME_TYPES, it?.frameSystem, true)}</select></div>
+      <div class="field"><label>${t('form.glassType')}</label><select id="i_glass">${optionsHtmlById(GLASS_TYPES, it?.glassType, true)}</select></div>
+      <div class="field"><label>${t('form.glassThickness')}</label><input id="i_glassThick" value="${esc(it?.glassThickness||'24mm IGU')}"></div>
+      <div class="field"><label>${t('form.colour')}</label><select id="i_color">${optionsHtml(COLORS, it?.color)}</select></div>
+      <div class="field"><label>${t('form.screenType')}</label><select id="i_screen">${optionsHtml(SCREEN_TYPES, it?.screenType)}</select></div>
+      <div class="field"><label>${t('form.hardware')}</label><select id="i_hardware">${optionsHtml(HARDWARE, it?.hardware)}</select></div>
+      <div class="field"><label>${t('form.grid')}</label><input id="i_grid" value="${esc(it?.grid||'None')}"></div>
+      <div class="field"><label>${tf('form.installRequested',{fee:installFee})}</label>
+        <select id="i_install"><option value="0" ${!it?.installRequested?'selected':''}>${t('common.no')}</option><option value="1" ${it?.installRequested?'selected':''}>${t('common.yes')}</option></select></div>
+    </div>
+    <div id="diagramPreview" class="diagram" style="width:100px;"></div>
+  `;
+}
+function refreshItemFormFields(it){
+  const cat = document.getElementById('i_category').value;
+  document.getElementById('itemTypeBody').innerHTML = itemFormBodyHtml(cat, it);
+  const cfg = CATEGORY_CONFIG[cat] || {};
+  if(cfg.kind !== 'door'){
+    refreshAutoO();
+    document.getElementById('diagramPreview').innerHTML = diagramSVG(cat);
+  }
 }
 function refreshAutoO(){
   const cat = document.getElementById('i_category').value;
@@ -716,25 +750,38 @@ function refreshAutoO(){
 async function saveItem(orderId, itemNo){
   const category = document.getElementById('i_category').value;
   const cfg = CATEGORY_CONFIG[category] || {unit:'mm', dims:[]};
-  const width = Number(document.getElementById('i_width').value);
-  const height = Number(document.getElementById('i_height').value);
   const qty = Number(document.getElementById('i_qty').value)||1;
-  if(!width || !height){ alert(t('alert.widthHeightRequired')); return; }
-  const dimO = cfg.dims.includes('O') ? Number(document.getElementById('i_dimO').value)||null : null;
-  const dimS = cfg.dims.includes('S') ? Number(document.getElementById('i_dimS').value)||null : null;
-  const dimT = cfg.dims.includes('T') ? Number(document.getElementById('i_dimT').value)||null : null;
-  if(cfg.dims.includes('O') && !cfg.oAuto && !dimO){ alert(t('alert.widthHeightRequired')); return; }
-  if(cfg.dims.includes('S') && !dimS){ alert(t('alert.widthHeightRequired')); return; }
-  if(cfg.dims.includes('T') && !dimT){ alert(t('alert.widthHeightRequired')); return; }
-  const data = {
-    category, width, height, unit: cfg.unit, dimO, dimS, dimT, quantity: qty,
-    frameSystem: document.getElementById('i_frame').value.trim(), openingStyle: document.getElementById('i_opening').value,
-    glassType: document.getElementById('i_glass').value, glassThickness: document.getElementById('i_glassThick').value.trim(),
-    color: document.getElementById('i_color').value, screenType: document.getElementById('i_screen').value,
-    hardware: document.getElementById('i_hardware').value, grid: document.getElementById('i_grid').value.trim(),
-    room: document.getElementById('i_room').value.trim(), specialOptions: document.getElementById('i_special').value.trim(),
-    installNotes: document.getElementById('i_installNotes').value.trim(), notes: document.getElementById('i_notes').value.trim(),
-  };
+  const room = document.getElementById('i_room').value.trim();
+  const specialOptions = document.getElementById('i_special').value.trim();
+  const installNotes = document.getElementById('i_installNotes').value.trim();
+  const notes = document.getElementById('i_notes').value.trim();
+  let data;
+  if(cfg.kind === 'door'){
+    data = {
+      category, width: DOOR_WIDTH_IN, height: DOOR_HEIGHT_IN, unit: cfg.unit, dimO:null, dimS:null, dimT:null, quantity: qty,
+      frameSystem: '', openingStyle: '', glassType: '', glassThickness: '', color: '', screenType: '', hardware: '', grid: '',
+      room, specialOptions, installNotes, notes, installRequested: false,
+    };
+  } else {
+    const width = Number(document.getElementById('i_width').value);
+    const height = Number(document.getElementById('i_height').value);
+    if(!width || !height){ alert(t('alert.widthHeightRequired')); return; }
+    const dimO = cfg.dims.includes('O') ? Number(document.getElementById('i_dimO').value)||null : null;
+    const dimS = cfg.dims.includes('S') ? Number(document.getElementById('i_dimS').value)||null : null;
+    const dimT = cfg.dims.includes('T') ? Number(document.getElementById('i_dimT').value)||null : null;
+    if(cfg.dims.includes('O') && !cfg.oAuto && !dimO){ alert(t('alert.widthHeightRequired')); return; }
+    if(cfg.dims.includes('S') && !dimS){ alert(t('alert.widthHeightRequired')); return; }
+    if(cfg.dims.includes('T') && !dimT){ alert(t('alert.widthHeightRequired')); return; }
+    data = {
+      category, width, height, unit: cfg.unit, dimO, dimS, dimT, quantity: qty,
+      frameSystem: document.getElementById('i_frame').value, openingStyle: document.getElementById('i_opening').value,
+      glassType: document.getElementById('i_glass').value, glassThickness: document.getElementById('i_glassThick').value.trim(),
+      color: document.getElementById('i_color').value, screenType: document.getElementById('i_screen').value,
+      hardware: document.getElementById('i_hardware').value, grid: document.getElementById('i_grid').value.trim(),
+      room, specialOptions, installNotes, notes,
+      installRequested: document.getElementById('i_install').value === '1',
+    };
+  }
   try{
     if(itemNo){
       const it = findItem(itemNo);
@@ -1201,30 +1248,69 @@ function renderMaterialFormulasTab(){
   `;
 }
 function renderPricingTab(){
-  const rows = PRODUCT_TYPES.map(p=>{
+  const windowCats = PRODUCT_TYPES.filter(p => (CATEGORY_CONFIG[p.id]||{}).kind !== 'door');
+  const minRows = windowCats.map(p=>{
     const pr = state.pricing.products[p.id];
     return `<tr>
       <td>${esc(pname(p))}<div class="small">${esc(state.lang==='zh'?p.en:p.zh)}</div></td>
       <td>${pr.active? `<span class="badge done">${t('formulas.active')}</span>` : `<span class="badge hold">${t('formulas.inactive')}</span>`}</td>
       <td>v${pr.version}</td>
-      <td>$${pr.basePrice}</td><td>$${pr.pricePerSqFt}</td>
+      <td>$${pr.basePrice}</td>
       <td class="small">${esc(pr.changedBy)}<br>${fmtDateTime(pr.changedAt)}</td>
       <td><button class="btn ghost" onclick="openProductPricingModal('${p.id}')">${t('common.edit')}</button></td>
     </tr>`;
   }).join('');
+  const frameRows = Object.values(state.pricing.frameTypes).map(f => `<tr>
+    <td>${esc(state.lang==='zh'?f.labelZh:f.labelEn)}<div class="small">${esc(f.id)}</div></td>
+    <td>${f.active?`<span class="badge done">${t('formulas.active')}</span>`:`<span class="badge hold">${t('formulas.inactive')}</span>`}</td>
+    <td>v${f.version}</td><td>$${f.ratePerSqFt}/sqft</td>
+    <td class="small">${esc(f.changedBy)}<br>${fmtDateTime(f.changedAt)}</td>
+    <td><button class="btn ghost" onclick="openFrameTypeModal('${f.id}')">${t('common.edit')}</button></td>
+  </tr>`).join('');
+  const glassRows = Object.values(state.pricing.glassTypes).map(g => `<tr>
+    <td>${esc(state.lang==='zh'?g.labelZh:g.labelEn)}<div class="small">${esc(g.id)}</div></td>
+    <td>${g.active?`<span class="badge done">${t('formulas.active')}</span>`:`<span class="badge hold">${t('formulas.inactive')}</span>`}</td>
+    <td>v${g.version}</td><td>$${g.ratePerSqFt}/sqft</td>
+    <td class="small">${esc(g.changedBy)}<br>${fmtDateTime(g.changedAt)}</td>
+    <td><button class="btn ghost" onclick="openGlassTypeModal('${g.id}')">${t('common.edit')}</button></td>
+  </tr>`).join('');
+  const doorRows = Object.values(state.pricing.patioDoors).map(d => `<tr>
+    <td>${esc(state.lang==='zh'?d.labelZh:d.labelEn)}<div class="small">${esc(d.id)}</div></td>
+    <td>${d.active?`<span class="badge done">${t('formulas.active')}</span>`:`<span class="badge hold">${t('formulas.inactive')}</span>`}</td>
+    <td>v${d.version}</td><td>$${C.fmtCents(d.flatPriceCents)}</td>
+    <td class="small">${esc(d.changedBy)}<br>${fmtDateTime(d.changedAt)}</td>
+    <td><button class="btn ghost" onclick="openPatioDoorModal('${d.id}')">${t('common.edit')}</button></td>
+  </tr>`).join('');
   const m = state.pricing.modifiers;
   return `
-    <div class="banner warn">${t('pricing.warnBanner')}</div>
-    <div class="card" style="padding:0;">
-      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.basePrice')}</th><th>${t('th.pricePerSqFt')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
-      <tbody>${rows}</tbody></table>
+    <div class="banner info">${t('pricing.realNote')}</div>
+    <div class="card">
+      <h3 style="margin-top:0;font-size:14px;color:var(--navy);">${t('pricing.frameTypesTitle')}</h3>
+      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.ratePerSqFt')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
+      <tbody>${frameRows}</tbody></table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;font-size:14px;color:var(--navy);">${t('pricing.glassTypesTitle')}</h3>
+      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.ratePerSqFt')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
+      <tbody>${glassRows}</tbody></table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;font-size:14px;color:var(--navy);">${t('pricing.minimumsTitle')}</h3>
+      <div class="small" style="margin-bottom:6px;">${t('pricing.minimumsDesc')}</div>
+      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.minimumCharge')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
+      <tbody>${minRows}</tbody></table>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;font-size:14px;color:var(--navy);">${t('pricing.doorsTitle')}</h3>
+      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.flatPrice')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
+      <tbody>${doorRows}</tbody></table>
     </div>
     <div class="card">
       <div class="flexRow" style="justify-content:space-between;">
-        <h3 style="margin:0;font-size:14px;color:var(--navy);">${t('pricing.editModifiers')} (v${m.version})</h3>
-        <button class="btn secondary" onclick="openModifiersModal()">${t('pricing.editModifiersBtn')}</button>
+        <h3 style="margin:0;font-size:14px;color:var(--navy);">${t('pricing.installFeeTitle')} (v${m.version})</h3>
+        <button class="btn secondary" onclick="openInstallFeeModal()">${t('common.edit')}</button>
       </div>
-      <div class="small" style="margin-top:6px;">${t('pricing.modifiersDesc')}</div>
+      <div class="small" style="margin-top:6px;">$${C.fmtCents(m.installFeeCents)} ${t('pricing.perWindow')}</div>
       <div class="small" style="margin-top:6px;">${t('pricing.lastChanged')}: ${esc(m.changedBy)} · ${fmtDateTime(m.changedAt)}</div>
     </div>
   `;
@@ -1234,18 +1320,18 @@ function openProductPricingModal(typeId){
   const p = PRODUCT_TYPES.find(x=>x.id===typeId);
   const cfg = CATEGORY_CONFIG[typeId] || {unit:'mm'};
   const defaultW = cfg.unit==='in' ? 36 : 900, defaultH = cfg.unit==='in' ? 48 : 1200;
-  document.getElementById('modalTitle').textContent = `${t('pricing.editProduct')} — ${pname(p)}`;
+  document.getElementById('modalTitle').textContent = `${t('pricing.editMinimum')} — ${pname(p)}`;
   document.getElementById('modalBody').innerHTML = `
     <div class="grid cols-2">
       <div class="field"><label>${t('formulas.active')}</label><select id="pp_active"><option value="1" ${pr.active?'selected':''}>${t('formulas.active')}</option><option value="0" ${!pr.active?'selected':''}>${t('formulas.inactive')}</option></select></div>
       <div class="field"><label>${t('formulas.version')}</label><input value="v${pr.version} ${t('formulas.autoIncrement')}" disabled></div>
-      <div class="field"><label>${t('pricing.basePriceLbl')}</label><input type="number" step="0.01" id="pp_base" value="${pr.basePrice}"></div>
-      <div class="field"><label>${t('pricing.perSqFtLbl')}</label><input type="number" step="0.01" id="pp_rate" value="${pr.pricePerSqFt}"></div>
+      <div class="field"><label>${t('pricing.minimumChargeLbl')}</label><input type="number" step="0.01" id="pp_min" value="${pr.basePrice}"></div>
     </div>
-    <fieldset><legend>${t('pricing.testTitle')}</legend>
+    <fieldset><legend>${t('pricing.testMinimumTitle')}</legend>
       <div class="grid cols-3">
         <div class="field"><label>${tf('form.width',{unit:cfg.unit})}</label><input type="number" id="pp_testW" value="${defaultW}"></div>
         <div class="field"><label>${tf('form.height',{unit:cfg.unit})}</label><input type="number" id="pp_testH" value="${defaultH}"></div>
+        <div class="field"><label>${t('pricing.testCombinedRate')}</label><input type="number" step="0.01" id="pp_testRate" value="30"></div>
       </div>
       <button class="btn secondary" type="button" onclick="testProductPricing('${typeId}')">${t('formulas.runTest')}</button>
       <div id="pp_testResult" style="margin-top:10px;" class="small"></div>
@@ -1263,57 +1349,96 @@ function openProductPricingModal(typeId){
 }
 function testProductPricing(typeId){
   const cfg = CATEGORY_CONFIG[typeId] || {unit:'mm'};
-  const base = Number(document.getElementById('pp_base').value)||0;
-  const rate = Number(document.getElementById('pp_rate').value)||0;
+  const minimum = Number(document.getElementById('pp_min').value)||0;
+  const rate = Number(document.getElementById('pp_testRate').value)||0;
   const w = Number(document.getElementById('pp_testW').value)||0;
   const h = Number(document.getElementById('pp_testH').value)||0;
   const areaSqFt = cfg.unit==='in' ? (w*h)/144 : (w/304.8)*(h/304.8);
-  const price = base + rate*areaSqFt;
-  document.getElementById('pp_testResult').innerHTML = `${t('pricing.testResultLabel')}: <b>$${price.toFixed(2)}</b> (${areaSqFt.toFixed(2)} sq ft)`;
+  const sizePrice = rate*areaSqFt;
+  const price = Math.max(sizePrice, minimum);
+  document.getElementById('pp_testResult').innerHTML = `${t('pricing.testResultLabel')}: <b>$${price.toFixed(2)}</b> (${areaSqFt.toFixed(2)} sq ft; size price $${sizePrice.toFixed(2)}${sizePrice<minimum?' — minimum applied':''})`;
 }
 async function saveProductPricing(typeId){
   const draft = {
     active: document.getElementById('pp_active').value==='1',
-    basePrice: Number(document.getElementById('pp_base').value)||0,
-    pricePerSqFt: Number(document.getElementById('pp_rate').value)||0,
+    basePrice: Number(document.getElementById('pp_min').value)||0,
+    pricePerSqFt: 0,
   };
   try{
     await D.saveProductPricing(typeId, draft);
     closeModal(); route('formulas');
   }catch(err){ alert(err.message); }
 }
-function openModifiersModal(){
-  const m = state.pricing.modifiers;
-  const section = (title, obj, list) => `
-    <fieldset><legend>${title}</legend><div class="grid cols-3">
-      ${Object.keys(obj).map(k=>`<div class="field"><label>${esc(opt(list,k))}</label><input type="number" step="0.01" id="pm_${btoa(unescape(encodeURIComponent(k))).replace(/=/g,'')}" value="${obj[k]}"></div>`).join('')}
-    </div></fieldset>`;
-  document.getElementById('modalTitle').textContent = t('pricing.editModifiers');
+function openFrameTypeModal(id){
+  const f = state.pricing.frameTypes[id];
+  document.getElementById('modalTitle').textContent = `${t('pricing.editFrameType')} — ${state.lang==='zh'?f.labelZh:f.labelEn}`;
   document.getElementById('modalBody').innerHTML = `
-    ${section(t('pricing.glassSection'), m.glass, GLASS_TYPES)}
-    ${section(t('pricing.colorSection'), m.color, COLORS)}
-    ${section(t('pricing.screenSection'), m.screen, SCREEN_TYPES)}
-    ${section(t('pricing.hardwareSection'), m.hardware, HARDWARE)}
-    <div class="field"><label>${t('pricing.gridSurchargeLbl')}</label><input type="number" step="0.01" id="pm_gridSurcharge" value="${m.gridSurcharge}"></div>
+    <div class="grid cols-2">
+      <div class="field"><label>${t('formulas.active')}</label><select id="ft_active"><option value="1" ${f.active?'selected':''}>${t('formulas.active')}</option><option value="0" ${!f.active?'selected':''}>${t('formulas.inactive')}</option></select></div>
+      <div class="field"><label>${t('formulas.version')}</label><input value="v${f.version} ${t('formulas.autoIncrement')}" disabled></div>
+      <div class="field"><label>${t('pricing.ratePerSqFtLbl')}</label><input type="number" step="0.01" id="ft_rate" value="${f.ratePerSqFt}"></div>
+    </div>
   `;
   document.getElementById('modalFoot').innerHTML = `
     <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
-    <button class="btn" onclick="saveModifiers()">${t('formulas.savePublish')}</button>`;
+    <button class="btn" onclick="saveFrameTypeModal('${id}')">${t('formulas.savePublish')}</button>`;
   openModal();
 }
-function modKey(k){ return 'pm_'+btoa(unescape(encodeURIComponent(k))).replace(/=/g,''); }
-async function saveModifiers(){
+async function saveFrameTypeModal(id){
+  const draft = { active: document.getElementById('ft_active').value==='1', ratePerSqFt: Number(document.getElementById('ft_rate').value)||0 };
+  try{ await D.saveFrameType(id, draft); closeModal(); route('formulas'); }catch(err){ alert(err.message); }
+}
+function openGlassTypeModal(id){
+  const g = state.pricing.glassTypes[id];
+  document.getElementById('modalTitle').textContent = `${t('pricing.editGlassType')} — ${state.lang==='zh'?g.labelZh:g.labelEn}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="grid cols-2">
+      <div class="field"><label>${t('formulas.active')}</label><select id="gt_active"><option value="1" ${g.active?'selected':''}>${t('formulas.active')}</option><option value="0" ${!g.active?'selected':''}>${t('formulas.inactive')}</option></select></div>
+      <div class="field"><label>${t('formulas.version')}</label><input value="v${g.version} ${t('formulas.autoIncrement')}" disabled></div>
+      <div class="field"><label>${t('pricing.ratePerSqFtLbl')}</label><input type="number" step="0.01" id="gt_rate" value="${g.ratePerSqFt}"></div>
+    </div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
+    <button class="btn" onclick="saveGlassTypeModal('${id}')">${t('formulas.savePublish')}</button>`;
+  openModal();
+}
+async function saveGlassTypeModal(id){
+  const draft = { active: document.getElementById('gt_active').value==='1', ratePerSqFt: Number(document.getElementById('gt_rate').value)||0 };
+  try{ await D.saveGlassType(id, draft); closeModal(); route('formulas'); }catch(err){ alert(err.message); }
+}
+function openPatioDoorModal(id){
+  const d = state.pricing.patioDoors[id];
+  document.getElementById('modalTitle').textContent = `${t('pricing.editDoor')} — ${state.lang==='zh'?d.labelZh:d.labelEn}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="grid cols-2">
+      <div class="field"><label>${t('formulas.active')}</label><select id="dr_active"><option value="1" ${d.active?'selected':''}>${t('formulas.active')}</option><option value="0" ${!d.active?'selected':''}>${t('formulas.inactive')}</option></select></div>
+      <div class="field"><label>${t('formulas.version')}</label><input value="v${d.version} ${t('formulas.autoIncrement')}" disabled></div>
+      <div class="field"><label>${t('pricing.flatPriceLbl')}</label><input type="number" step="0.01" id="dr_price" value="${C.fmtCents(d.flatPriceCents)}"></div>
+    </div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
+    <button class="btn" onclick="savePatioDoorModal('${id}')">${t('formulas.savePublish')}</button>`;
+  openModal();
+}
+async function savePatioDoorModal(id){
+  const draft = { active: document.getElementById('dr_active').value==='1', flatPrice: Number(document.getElementById('dr_price').value)||0 };
+  try{ await D.savePatioDoorPrice(id, draft); closeModal(); route('formulas'); }catch(err){ alert(err.message); }
+}
+function openInstallFeeModal(){
   const m = state.pricing.modifiers;
-  const draft = { glass:{}, color:{}, screen:{}, hardware:{} };
-  ['glass','color','screen','hardware'].forEach(cat=>{
-    Object.keys(m[cat]).forEach(k=>{
-      const el = document.getElementById(modKey(k));
-      draft[cat][k] = el ? (Number(el.value)||0) : m[cat][k];
-    });
-  });
-  draft.gridSurcharge = Number(document.getElementById('pm_gridSurcharge').value)||0;
+  document.getElementById('modalTitle').textContent = t('pricing.installFeeTitle');
+  document.getElementById('modalBody').innerHTML = `<div class="field"><label>${t('pricing.installFeeLbl')}</label><input type="number" step="0.01" id="if_fee" value="${C.fmtCents(m.installFeeCents)}"></div>`;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
+    <button class="btn" onclick="saveInstallFeeModal()">${t('formulas.savePublish')}</button>`;
+  openModal();
+}
+async function saveInstallFeeModal(){
+  const dollars = Number(document.getElementById('if_fee').value)||0;
   try{
-    await D.saveModifiers(draft);
+    await D.saveInstallFee(dollars);
     closeModal(); route('formulas');
   }catch(err){ alert(err.message); }
 }
@@ -1430,7 +1555,9 @@ Object.assign(window, {
   openFactorySheet, generateFactorySheet, printDocument, markSentToFactory,
   openInvoiceModal, generateInvoice,
   switchFormulaAdminTab, openFormulaModal, testFormula, saveFormula,
-  openProductPricingModal, testProductPricing, saveProductPricing, openModifiersModal, saveModifiers,
+  openProductPricingModal, testProductPricing, saveProductPricing,
+  openFrameTypeModal, saveFrameTypeModal, openGlassTypeModal, saveGlassTypeModal,
+  openPatioDoorModal, savePatioDoorModal, openInstallFeeModal, saveInstallFeeModal,
   onGlobalSearch, closeSearch, openModal, closeModal,
 });
 
