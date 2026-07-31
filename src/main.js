@@ -522,6 +522,7 @@ async function renderOrderDetail(id){
       <div>
         ${canEdit()&&!archived?`<button class="btn secondary" onclick="openOrderModal('${o.id}')">${t('common.edit')}</button>`:''}
         <button class="btn secondary" onclick="openFactorySheet('${o.id}')">${t('order.factorySheetBtn')}</button>
+        <button class="btn secondary" onclick="openInvoiceModal('${o.id}')">${t('invoice.btn')}</button>
         ${canEdit()&&!archived?`<button class="btn secondary" onclick="archiveOrder('${o.id}')">${t('common.archive')}</button>`:''}
         ${canEdit()&&archived?`<button class="btn secondary" onclick="restoreOrder('${o.id}')">${t('common.restore')}</button>`:''}
         <button class="btn secondary" onclick="route('orders')">${t('order.back')}</button>
@@ -988,9 +989,9 @@ async function generateFactorySheet(orderId){
   document.getElementById('modalFoot').innerHTML = `
     <button class="btn secondary" onclick="closeModal()">${t('common.close')}</button>
     <button class="btn secondary" onclick="markSentToFactory('${orderId}')">${t('factory.markSent')}</button>
-    <button class="btn" onclick="printFactorySheet()">${t('common.print')}</button>`;
+    <button class="btn" onclick="printDocument()">${t('common.print')}</button>`;
 }
-function printFactorySheet(){
+function printDocument(){
   document.getElementById('printSheet').classList.add('showing');
   window.print();
   setTimeout(()=> document.getElementById('printSheet').classList.remove('showing'), 300);
@@ -1000,6 +1001,106 @@ async function markSentToFactory(orderId){
     await D.markSentToFactory(orderId);
     closeModal(); route('order-detail', orderId);
   }catch(err){ alert(err.message); }
+}
+
+/* ================= INVOICE ================= */
+function openInvoiceModal(orderId){
+  document.getElementById('modalTitle').textContent = t('invoice.title');
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field"><label>${t('invoice.docLang')}</label>
+      <select id="inv_lang"><option value="en">${t('factory.langEn')}</option><option value="zh">${t('factory.langZh')}</option><option value="both" selected>${t('factory.langBoth')}</option></select></div>
+    <div class="banner info">${t('invoice.info')}</div>
+  `;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn secondary" onclick="closeModal()">${t('common.cancel')}</button>
+    <button class="btn" onclick="generateInvoice('${orderId}')">${t('invoice.generatePreview')}</button>`;
+  openModal();
+}
+async function generateInvoice(orderId){
+  const o = currentOrder;
+  const client = await D.getClient(o.clientId);
+  const lang = document.getElementById('inv_lang').value;
+  let version;
+  try{
+    version = await D.generateInvoice(orderId, o.invoiceVersion, lang);
+  }catch(err){ alert(err.message); return; }
+  o.invoiceVersion = version;
+
+  const showEn = lang==='en'||lang==='both', showZh = lang==='zh'||lang==='both';
+  const label = (en,zh) => showEn&&showZh? `${en} / ${zh}` : showZh ? zh : en;
+
+  const q = o.quote;
+  const useSnapshot = (q.status==='sent' || q.status==='approved') && q.snapshot;
+  let subtotalCents, discountPct, taxPct, discountCents, taxCents, totalCents, lineRows, excludedCount;
+  if(useSnapshot){
+    const snap = q.snapshot;
+    subtotalCents = snap.subtotalCents; discountPct = snap.discountPct; taxPct = snap.taxPct;
+    discountCents = snap.discountCents; taxCents = snap.taxCents; totalCents = snap.totalCents;
+    excludedCount = snap.items.filter(s=>!s.ok).length;
+    lineRows = snap.items.map(s=>{
+      const it = o.items.find(i=>i.itemNo===s.itemNo);
+      const desc = it ? `${esc(s.itemNo)} — ${esc(productLabel(it.category))} (${it.width}×${it.height}${it.unit} × ${s.quantity})` : esc(s.itemNo);
+      return s.ok
+        ? `<tr><td>${desc}</td><td class="num">$${C.fmtCents(s.unitCents)}</td><td class="num">$${C.fmtCents(s.lineTotalCents)}</td></tr>`
+        : `<tr><td>${desc}</td><td colspan="2" class="small" style="color:var(--red);">${label('Manual quote required','需要手动报价')}</td></tr>`;
+    });
+  } else {
+    const live = C.computeOrderQuoteLive(o.items, state.pricing);
+    subtotalCents = live.subtotalCents; discountPct = q.discountPct||0; taxPct = q.taxPct||0;
+    discountCents = Math.round(subtotalCents*discountPct/100);
+    const taxableCents = subtotalCents-discountCents;
+    taxCents = Math.round(taxableCents*taxPct/100);
+    totalCents = q.manualTotalCents!=null ? q.manualTotalCents : taxableCents+taxCents;
+    excludedCount = live.excludedCount;
+    lineRows = live.results.map(r=> r.q.ok
+      ? `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))} (${r.item.width}×${r.item.height}${r.item.unit} × ${r.item.quantity})</td><td class="num">$${C.fmtCents(r.q.unitCents)}</td><td class="num">$${C.fmtCents(r.q.lineTotalCents)}</td></tr>`
+      : `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))}</td><td colspan="2" class="small" style="color:var(--red);">${label('Manual quote required','需要手动报价')}</td></tr>`);
+  }
+  const depositCents = Math.round((Number(o.deposit)||0)*100);
+  const balanceDueCents = totalCents - depositCents;
+  const provisional = q.status==='draft';
+
+  const sheet = `
+    <div class="fsheet">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div><h2 style="margin:0;">家福门窗 Home Fortune Windows &amp; Doors</h2>
+        <div class="small">120–8812 Laurel Street, Vancouver, BC V6P 3V8 · 604 349 9180 · homefortunecanada@gmail.com</div></div>
+        <div style="text-align:right;">
+          <div style="font-weight:800;font-size:16px;color:var(--navy);">${label('INVOICE','发票')}</div>
+          <div class="small">${label('Invoice #','发票号')}: ${o.orderNo}-INV${version} &nbsp; ${label('Date','日期')}: ${fmtDate(new Date().toISOString())}</div>
+        </div>
+      </div>
+      ${provisional ? `<div class="banner warn">⚠ ${label('PROVISIONAL — this quote has not been sent to or approved by the client yet. Totals may still change.','临时版本 — 该报价尚未发送给客户或客户尚未批准，总额可能仍会变动。')}</div>` : ''}
+      <div class="metaGrid">
+        <div><b>${label('Bill To','账单地址')}:</b> ${esc(client.fullName)}${client.company?' — '+esc(client.company):''}<br>${esc(client.billingAddress)}<br>${esc(client.phone1)}${client.email?' · '+esc(client.email):''}</div>
+        <div><b>${label('Project Address','项目地址')}:</b> ${esc(o.projectAddress)}</div>
+        <div><b>${label('Order #','订单号')}:</b> ${o.orderNo}</div>
+        <div><b>${label('Order Date','订单日期')}:</b> ${fmtDate(o.orderDate)}</div>
+        <div><b>${label('Salesperson','销售员')}:</b> ${esc(o.salesperson)||'—'}</div>
+        <div><b>${label('Status','状态')}:</b> ${esc(statusLabel(o.status))}</div>
+      </div>
+      ${excludedCount>0 ? `<div class="banner warn">${excludedCount} ${label('item(s) need a manual quote and are not included in this invoice.','个项目需要手动报价，未包含在此发票中。')}</div>` : ''}
+      <table><thead><tr><th>${label('Description','说明')}</th><th>${label('Unit Price','单价')}</th><th>${label('Line Total','小计')}</th></tr></thead>
+      <tbody>${lineRows.join('')}</tbody></table>
+      <table style="margin-top:8px;">
+        <tbody>
+          <tr><td style="text-align:right;border:none;"><b>${label('Subtotal','小计总额')}</b></td><td class="num" style="width:120px;border:none;">$${C.fmtCents(subtotalCents)}</td></tr>
+          ${discountCents ? `<tr><td style="text-align:right;border:none;">${label('Discount','折扣')} (${discountPct}%)</td><td class="num" style="border:none;">−$${C.fmtCents(discountCents)}</td></tr>` : ''}
+          <tr><td style="text-align:right;border:none;">${label('Tax','税额')} (${taxPct}%)</td><td class="num" style="border:none;">$${C.fmtCents(taxCents)}</td></tr>
+          <tr><td style="text-align:right;border:none;font-size:15px;color:var(--navy);"><b>${label('Grand Total','总计')}</b></td><td class="num" style="border:none;font-size:15px;color:var(--navy);"><b>$${C.fmtCents(totalCents)}</b></td></tr>
+          <tr><td style="text-align:right;border:none;">${label('Deposit Received','已收订金')}</td><td class="num" style="border:none;">−$${C.fmtCents(depositCents)}</td></tr>
+          <tr><td style="text-align:right;border:none;font-weight:800;">${label('Balance Due','尾款金额')}</td><td class="num" style="border:none;font-weight:800;">$${C.fmtCents(balanceDueCents)}</td></tr>
+        </tbody>
+      </table>
+      ${o.paymentNotes?`<div class="small" style="margin-top:8px;"><b>${label('Payment Notes','付款备注')}:</b> ${esc(o.paymentNotes)}</div>`:''}
+      <div class="footNote">${label('Invoice version','发票版本')} ${version}. ${label('Pricing shown uses SAMPLE placeholder rates — not Home Fortune\'s real, approved price list yet.','所示价格为示例占位费率 — 并非家福门窗真实、已核准的价目表。')}</div>
+    </div>`;
+  document.getElementById('printSheet').innerHTML = sheet;
+
+  document.getElementById('modalBody').innerHTML = `<div style="max-height:60vh;overflow:auto;border:1px solid var(--gray-200);border-radius:8px;padding:10px;">${sheet}</div>`;
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn secondary" onclick="closeModal()">${t('common.close')}</button>
+    <button class="btn" onclick="printDocument()">${t('common.print')}</button>`;
 }
 
 /* ================= FORMULA ADMIN ================= */
@@ -1260,7 +1361,8 @@ Object.assign(window, {
   openItemModal, saveItem, refreshItemFormFields, refreshAutoO, duplicateItem, runCalculation, approveCalc, reopenCalc,
   switchOrderTab,
   updateQuoteRates, updateManualTotal, sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,
-  openFactorySheet, generateFactorySheet, printFactorySheet, markSentToFactory,
+  openFactorySheet, generateFactorySheet, printDocument, markSentToFactory,
+  openInvoiceModal, generateInvoice,
   switchFormulaAdminTab, openFormulaModal, testFormula, saveFormula,
   openProductPricingModal, testProductPricing, saveProductPricing, openModifiersModal, saveModifiers,
   onGlobalSearch, closeSearch, openModal, closeModal,

@@ -83,6 +83,18 @@ export const I18N = {
     'factory.langBoth':'English + 中文','factory.info':'Sheet will include all items with an approved calculation. Items still in draft or awaiting approval will be flagged and excluded.',
     'factory.generatePreview':'Generate & Preview','factory.markSent':'Mark as Sent to Factory',
 
+    'invoice.btn':'🧾 Invoice','invoice.title':'Client Invoice','invoice.docLang':'Document language',
+    'invoice.info':'Generates a printable invoice from the current quote. If the quote has been sent or approved, totals are frozen to that version — otherwise this uses live (unsent) totals.',
+    'invoice.generatePreview':'Generate & Preview','invoice.header':'INVOICE','invoice.invoiceNo':'Invoice #','invoice.date':'Date',
+    'invoice.billTo':'Bill To','invoice.projectAddress':'Project Address','invoice.orderNo':'Order #','invoice.orderDate':'Order Date',
+    'invoice.salesperson':'Salesperson','invoice.description':'Description','invoice.unitPrice':'Unit Price','invoice.lineTotal':'Line Total',
+    'invoice.subtotal':'Subtotal','invoice.discount':'Discount','invoice.tax':'Tax','invoice.grandTotal':'Grand Total',
+    'invoice.depositReceived':'Deposit Received','invoice.balanceDue':'Balance Due','invoice.paymentNotes':'Payment Notes',
+    'invoice.provisionalBanner':'PROVISIONAL — this quote has not been sent to or approved by the client yet. Totals may still change.',
+    'invoice.excludedNote':'item(s) need a manual quote and are not included in this invoice.',
+    'invoice.footnote':'Pricing shown uses SAMPLE placeholder rates — not Home Fortune\'s real, approved price list yet.',
+    'invoice.docVersion':'Invoice version',
+
     'formulas.title':'Formula Admin','formulas.desc':'Deterministic calculation rules by product type. Admin-only.',
     'formulas.restricted':'Formula management is restricted to Administrators.',
     'formulas.warnBanner':'Cut-size formulas are real, verified logic checked line-by-line against Home Fortune’s own cut-list workbooks (see tests/calc-engine.test.html) — not editable here, see each item for details. Custom Shape still requires individual engineering review. Only Active/Inactive and width/height range warnings are editable below.',
@@ -120,6 +132,7 @@ export const I18N = {
     'act.duplicatedItem':'Duplicated {src} as {item}','act.calculated':'Calculated {item}',
     'act.approvedCalc':'Approved calculation for {item}','act.reopenedCalc':'Reopened approved calculation for {item} (admin)',
     'act.generatedFactorySheet':'Generated factory sheet v{v} ({lang})','act.sentToFactory':'Marked as sent to factory',
+    'act.generatedInvoice':'Generated invoice v{v} ({lang})',
     'act.updatedFormula':'Updated formula for {type} to v{v}',
 
     'notApprovedExcluded':'item(s) excluded — not yet approved',
@@ -244,6 +257,18 @@ export const I18N = {
     'factory.langBoth':'English + 中文','factory.info':'生产单将包含所有已批准计算的项目。仍为草稿或待批准的项目将被标记并排除在外。',
     'factory.generatePreview':'生成并预览','factory.markSent':'标记为已送工厂',
 
+    'invoice.btn':'🧾 发票','invoice.title':'客户发票','invoice.docLang':'文档语言',
+    'invoice.info':'根据当前报价生成可打印发票。若报价已发送或已批准，总额将锁定为该版本；否则使用实时（未发送）总额。',
+    'invoice.generatePreview':'生成并预览','invoice.header':'发票 INVOICE','invoice.invoiceNo':'发票号','invoice.date':'日期',
+    'invoice.billTo':'账单地址','invoice.projectAddress':'项目地址','invoice.orderNo':'订单号','invoice.orderDate':'订单日期',
+    'invoice.salesperson':'销售员','invoice.description':'说明','invoice.unitPrice':'单价','invoice.lineTotal':'小计',
+    'invoice.subtotal':'小计总额','invoice.discount':'折扣','invoice.tax':'税额','invoice.grandTotal':'总计',
+    'invoice.depositReceived':'已收订金','invoice.balanceDue':'尾款金额','invoice.paymentNotes':'付款备注',
+    'invoice.provisionalBanner':'临时版本 — 该报价尚未发送给客户或客户尚未批准，总额可能仍会变动。',
+    'invoice.excludedNote':'个项目需要手动报价，未包含在此发票中。',
+    'invoice.footnote':'所示价格为示例占位费率 — 并非家福门窗真实、已核准的价目表。',
+    'invoice.docVersion':'发票版本',
+
     'formulas.title':'公式管理','formulas.desc':'按产品类型设定的确定性计算规则（仅管理员）。',
     'formulas.restricted':'公式管理仅限管理员使用。',
     'formulas.warnBanner':'下料公式为真实、已核实的逻辑，已逐条与家福自己的下料表核对（见 tests/calc-engine.test.html）——此页面不可编辑公式本身，详情见各项目。异形窗仍需单独工程审核。下方仅可编辑启用状态及宽高范围警告。',
@@ -281,6 +306,7 @@ export const I18N = {
     'act.duplicatedItem':'已将 {src} 复制为 {item}','act.calculated':'已计算 {item}',
     'act.approvedCalc':'已批准 {item} 的计算','act.reopenedCalc':'已重新打开 {item} 的已批准计算（管理员）',
     'act.generatedFactorySheet':'已生成工厂生产单第 {v} 版（{lang}）','act.sentToFactory':'已标记为已送工厂',
+    'act.generatedInvoice':'已生成发票第 {v} 版（{lang}）',
     'act.updatedFormula':'已将 {type} 的公式更新至第 {v} 版',
 
     'notApprovedExcluded':'个项目已排除 — 尚未批准',

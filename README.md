@@ -2,10 +2,17 @@
 
 Real, connected operations system for Home Fortune Windows & Doors — client
 profiles, orders, window/door item entry, a material cut-size calculation
-engine, a client quote/pricing engine, a bilingual (EN/简体中文) printable
-factory production sheet, an archive/restore workflow, a calendar of order/
-completion dates, and 5 role-based views (admin / office / measurement /
-factory / read-only).
+engine, a client quote/pricing engine, bilingual (EN/简体中文) printable
+factory production sheets and client invoices, an archive/restore workflow,
+a calendar of order/completion dates, and 5 role-based views (admin /
+office / measurement / factory / read-only).
+
+The **factory sheet** (production-facing, no pricing) and the **invoice**
+(client-facing, with pricing) are separate printable documents, each with
+their own version counter and audit trail. The invoice uses the order's
+sent/approved quote snapshot when one exists (frozen totals, including any
+manual price override), or live totals with a "PROVISIONAL" banner
+otherwise.
 
 Plain HTML/CSS/JS, no build step. Backed by Supabase (Postgres + Auth) via
 `supabase-js` loaded straight from a CDN as an ES module.
@@ -111,6 +118,9 @@ documented at the top of the file):
    configurations into Formula Admin / Quote Pricing. **Required** before
    creating any order item — without it, the new categories exist in the
    dropdown but have no formula/pricing row and will show "inactive".
+5. `005_invoice_version.sql` — adds the version counter the invoice feature
+   uses (mirrors the existing factory-sheet version). **Required** for the
+   Invoice button on an order to work.
 
 ## Known gaps / next steps
 

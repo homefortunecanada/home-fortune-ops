@@ -224,7 +224,7 @@ function mapOrderRow(row){
     salesperson: row.salesperson||'', measurementEmployee: row.measurement_employee||'', officeEmployee: row.office_employee||'',
     status: row.status, deposit: row.deposit, paymentNotes: row.payment_notes||'',
     internalNotes: row.internal_notes||'', factoryNotes: row.factory_notes||'', installNotes: row.install_notes||'',
-    factorySheetVersion: row.factory_sheet_version||0, createdAt: row.created_at,
+    factorySheetVersion: row.factory_sheet_version||0, invoiceVersion: row.invoice_version||0, createdAt: row.created_at,
     archivedAt: row.archived_at, archivedBy: profileName(row.archived_by),
   };
 }
@@ -438,6 +438,14 @@ export async function generateFactorySheet(orderId, currentVersion, lang){
   const nextVersion = currentVersion + 1;
   await call(supabase.from('orders').update({ factory_sheet_version: nextVersion }).eq('id', orderId));
   await pushHistory(orderId, 'generatedFactorySheet', { v: nextVersion, lang });
+  return nextVersion;
+}
+
+/* ================= INVOICE ================= */
+export async function generateInvoice(orderId, currentVersion, lang){
+  const nextVersion = currentVersion + 1;
+  await call(supabase.from('orders').update({ invoice_version: nextVersion }).eq('id', orderId));
+  await pushHistory(orderId, 'generatedInvoice', { v: nextVersion, lang });
   return nextVersion;
 }
 export async function markSentToFactory(orderId){
