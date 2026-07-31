@@ -20,7 +20,7 @@
 //
 // The quote/pricing engine (dollar amounts) is unrelated to this file and
 // still uses SAMPLE placeholder rates — see Formula Admin.
-import { t, tf, opt, GLASS_TYPES, COLORS, SCREEN_TYPES, HARDWARE } from './i18n.js';
+import { t, tf, opt, GLASS_TYPES, COLORS, SCREEN_TYPES, HARDWARE, CATEGORY_CONFIG } from './i18n.js';
 
 const IN_TO_MM = 25.4;
 
@@ -272,9 +272,10 @@ export function calcComponents(category, dims, qty, formulas){
     return {ok:false, error:t('calc.error.badnum')};
   }
   const W = Number(dims.W), H = Number(dims.H);
+  const unit = (CATEGORY_CONFIG[category]||{unit:'mm'}).unit;
   const warnings = [];
-  if(f.minW!=null && f.maxW!=null && (W < f.minW || W > f.maxW)) warnings.push(tf('calc.warn.widthRange',{w:W,min:f.minW,max:f.maxW}));
-  if(f.minH!=null && f.maxH!=null && (H < f.minH || H > f.maxH)) warnings.push(tf('calc.warn.heightRange',{h:H,min:f.minH,max:f.maxH}));
+  if(f.minW!=null && f.maxW!=null && (W < f.minW || W > f.maxW)) warnings.push(tf('calc.warn.widthRange',{w:W,min:f.minW,max:f.maxW,unit}));
+  if(f.minH!=null && f.maxH!=null && (H < f.minH || H > f.maxH)) warnings.push(tf('calc.warn.heightRange',{h:H,min:f.minH,max:f.maxH,unit}));
 
   const result = calc.fn(dims, qty);
   const components = applyQty(result.components, qty, calc.scalesWithQty)
@@ -311,7 +312,7 @@ export function computeQuoteLine(item, pricing){
   const gridCents = hasGrid ? Math.round(m.gridSurcharge*100) : 0;
   const lines = [
     {key:'base', label:t('quote.basePrice'), cents:baseCents},
-    {key:'size', label:tf('quote.sizeArea',{w:W,h:H,area:areaSqFt.toFixed(2)}), cents:sizeCents},
+    {key:'size', label:tf('quote.sizeArea',{w:W,h:H,area:areaSqFt.toFixed(2),unit:item.unit||'mm'}), cents:sizeCents},
   ];
   if(glassCents) lines.push({key:'glass', label:t('quote.glassUpgrade')+': '+opt(GLASS_TYPES,item.glassType), cents:glassCents});
   if(colorCents) lines.push({key:'color', label:t('quote.colourUpgrade')+': '+opt(COLORS,item.color), cents:colorCents});

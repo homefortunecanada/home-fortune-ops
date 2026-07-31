@@ -25,7 +25,7 @@ export const I18N = {
     'th.clientNo':'Client #','th.name':'Name','th.phone':'Phone','th.email':'Email','th.projectAddress':'Project Address',
     'th.language':'Language','th.orders':'Orders','th.orderNo':'Order #','th.client':'Client','th.status':'Status',
     'th.orderDate':'Order Date','th.dueDate':'Due Date','th.due':'Due','th.salesperson':'Salesperson','th.items':'Items',
-    'th.component':'Component','th.widthMm':'Width (mm)','th.heightMm':'Height (mm)','th.cutLength':'Cut Length (mm)','th.glass':'Glass','th.qtyPerUnit':'Qty/unit',
+    'th.component':'Component','th.widthMm':'Width (mm)','th.heightMm':'Height (mm)','th.widthIn':'Width (in)','th.heightIn':'Height (in)','th.cutLength':'Cut Length (mm)','th.glass':'Glass','th.qtyPerUnit':'Qty/unit',
     'th.totalQty':'Total Qty','th.product':'Product','th.versionCol':'Version','th.widthRange':'Width range','th.heightRange':'Height range',
     'th.lastChanged':'Last changed',
 
@@ -75,8 +75,8 @@ export const I18N = {
     'calc.error.inactive':'Formula for this product type is inactive or missing. Contact an administrator.',
     'calc.error.badnum':'All required dimensions must be positive numbers.',
     'calc.error.negativeResult':'These dimensions produce a zero or negative cut length or glass size — double check the measurements before calculating.',
-    'calc.warn.widthRange':'Width {w}mm is outside the approved range ({min}–{max}mm) for this product.',
-    'calc.warn.heightRange':'Height {h}mm is outside the approved range ({min}–{max}mm) for this product.',
+    'calc.warn.widthRange':'Width {w}{unit} is outside the approved range ({min}–{max}{unit}) for this product.',
+    'calc.warn.heightRange':'Height {h}{unit} is outside the approved range ({min}–{max}{unit}) for this product.',
     'calc.overdueTitle':'Overdue',
 
     'factory.title':'Factory Production Sheet','factory.docLang':'Document language','factory.langEn':'English','factory.langZh':'中文',
@@ -139,7 +139,7 @@ export const I18N = {
     'fs.footnote':'This document uses sample placeholder calculation formulas — not for actual production use until formulas are verified.',
 
     'quote.title':'Client Quote','quote.addItemsFirst':'Add windows/products above to generate a quote.',
-    'quote.basePrice':'Base price','quote.sizeArea':'Size {w}×{h}mm ({area} sq ft)','quote.glassUpgrade':'Glass upgrade',
+    'quote.basePrice':'Base price','quote.sizeArea':'Size {w}×{h}{unit} ({area} sq ft)','quote.glassUpgrade':'Glass upgrade',
     'quote.colourUpgrade':'Colour upgrade','quote.screenUpgrade':'Screen upgrade','quote.hardwareUpgrade':'Hardware upgrade',
     'quote.gridSurcharge':'Grid / grille surcharge','quote.estimatedPrice':'Estimated price','quote.perUnit':'per unit',
     'quote.unitPrice':'Unit Price','quote.lineTotal':'Line Total','quote.subtotal':'Subtotal','quote.discount':'Discount (%)',
@@ -203,7 +203,7 @@ export const I18N = {
     'th.clientNo':'客户编号','th.name':'姓名','th.phone':'电话','th.email':'邮箱','th.projectAddress':'项目地址',
     'th.language':'语言','th.orders':'订单数','th.orderNo':'订单号','th.client':'客户','th.status':'状态',
     'th.orderDate':'订单日期','th.dueDate':'要求完工日期','th.due':'到期日','th.salesperson':'销售员','th.items':'项目数',
-    'th.component':'部件','th.widthMm':'宽度(mm)','th.heightMm':'高度(mm)','th.cutLength':'下料长度(mm)','th.glass':'玻璃','th.qtyPerUnit':'每件数量',
+    'th.component':'部件','th.widthMm':'宽度(mm)','th.heightMm':'高度(mm)','th.widthIn':'宽度(in)','th.heightIn':'高度(in)','th.cutLength':'下料长度(mm)','th.glass':'玻璃','th.qtyPerUnit':'每件数量',
     'th.totalQty':'总数量','th.product':'产品','th.versionCol':'版本','th.widthRange':'宽度范围','th.heightRange':'高度范围',
     'th.lastChanged':'最后修改',
 
@@ -253,8 +253,8 @@ export const I18N = {
     'calc.error.inactive':'该产品类型的公式未启用或缺失，请联系管理员。',
     'calc.error.badnum':'所有必填尺寸必须为正数。',
     'calc.error.negativeResult':'当前尺寸会导致下料长度或玻璃尺寸为零或负数——请在计算前再次核实测量数据。',
-    'calc.warn.widthRange':'宽度 {w}mm 超出该产品的批准范围（{min}–{max}mm）。',
-    'calc.warn.heightRange':'高度 {h}mm 超出该产品的批准范围（{min}–{max}mm）。',
+    'calc.warn.widthRange':'宽度 {w}{unit} 超出该产品的批准范围（{min}–{max}{unit}）。',
+    'calc.warn.heightRange':'高度 {h}{unit} 超出该产品的批准范围（{min}–{max}{unit}）。',
     'calc.overdueTitle':'逾期',
 
     'factory.title':'工厂生产单','factory.docLang':'文档语言','factory.langEn':'English','factory.langZh':'中文',
@@ -317,7 +317,7 @@ export const I18N = {
     'fs.footnote':'本文档使用示例占位计算公式 — 在公式核实之前不得用于实际生产。',
 
     'quote.title':'客户报价','quote.addItemsFirst':'请先在上方添加窗户/产品，然后即可生成报价。',
-    'quote.basePrice':'基础价格','quote.sizeArea':'尺寸 {w}×{h}mm（{area} 平方英尺）','quote.glassUpgrade':'玻璃升级',
+    'quote.basePrice':'基础价格','quote.sizeArea':'尺寸 {w}×{h}{unit}（{area} 平方英尺）','quote.glassUpgrade':'玻璃升级',
     'quote.colourUpgrade':'颜色升级','quote.screenUpgrade':'纱窗升级','quote.hardwareUpgrade':'五金升级',
     'quote.gridSurcharge':'格条/网格附加费','quote.estimatedPrice':'预估价格','quote.perUnit':'每件',
     'quote.unitPrice':'单价','quote.lineTotal':'小计','quote.subtotal':'小计总额','quote.discount':'折扣 (%)',
@@ -360,7 +360,7 @@ export const I18N = {
   }
 };
 export function t(key){ const lang = state.lang || 'en'; return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key; }
-export function tf(key, params){ let s = t(key); Object.keys(params||{}).forEach(k=> s = s.replace('{'+k+'}', params[k])); return s; }
+export function tf(key, params){ let s = t(key); Object.keys(params||{}).forEach(k=> s = s.replaceAll('{'+k+'}', params[k])); return s; }
 export function actMsg(key, params){ return tf('act.'+key, params||{}); }
 
 /* ---------------- roles ---------------- */

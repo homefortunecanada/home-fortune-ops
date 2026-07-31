@@ -643,7 +643,7 @@ function renderCalcTable(calc, category){
     ${calc.results.map(c=>`<tr><td>${esc(state.lang==='zh'?c.labelZh:c.label)}${c.code&&c.code!=='TBD'?` <span class="tag">${esc(c.code)}</span>`:''}</td><td class="num">${c.length}</td><td class="num">${c.qtyEach}</td><td class="num">${c.totalQty}</td></tr>`).join('')}
     </tbody></table>`;
   if(calc.glass && calc.glass.length){
-    html += `<table class="calcTable" style="margin-top:8px;"><thead><tr><th>${t('th.glass')}</th><th>${t('th.widthMm')}</th><th>${t('th.heightMm')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>
+    html += `<table class="calcTable" style="margin-top:8px;"><thead><tr><th>${t('th.glass')}</th><th>${t('th.widthIn')}</th><th>${t('th.heightIn')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>
     ${calc.glass.map(g=>`<tr><td>${esc(state.lang==='zh'?g.labelZh:g.label)}</td><td class="num">${g.widthDisplay}</td><td class="num">${g.heightDisplay}</td><td class="num">${g.qtyEach}</td><td class="num">${g.totalQty}</td></tr>`).join('')}
     </tbody></table>`;
   }
@@ -1232,6 +1232,8 @@ function renderPricingTab(){
 function openProductPricingModal(typeId){
   const pr = state.pricing.products[typeId];
   const p = PRODUCT_TYPES.find(x=>x.id===typeId);
+  const cfg = CATEGORY_CONFIG[typeId] || {unit:'mm'};
+  const defaultW = cfg.unit==='in' ? 36 : 900, defaultH = cfg.unit==='in' ? 48 : 1200;
   document.getElementById('modalTitle').textContent = `${t('pricing.editProduct')} — ${pname(p)}`;
   document.getElementById('modalBody').innerHTML = `
     <div class="grid cols-2">
@@ -1242,10 +1244,10 @@ function openProductPricingModal(typeId){
     </div>
     <fieldset><legend>${t('pricing.testTitle')}</legend>
       <div class="grid cols-3">
-        <div class="field"><label>${t('formulas.testWidth')}</label><input type="number" id="pp_testW" value="900"></div>
-        <div class="field"><label>${t('formulas.testHeight')}</label><input type="number" id="pp_testH" value="1200"></div>
+        <div class="field"><label>${tf('form.width',{unit:cfg.unit})}</label><input type="number" id="pp_testW" value="${defaultW}"></div>
+        <div class="field"><label>${tf('form.height',{unit:cfg.unit})}</label><input type="number" id="pp_testH" value="${defaultH}"></div>
       </div>
-      <button class="btn secondary" type="button" onclick="testProductPricing()">${t('formulas.runTest')}</button>
+      <button class="btn secondary" type="button" onclick="testProductPricing('${typeId}')">${t('formulas.runTest')}</button>
       <div id="pp_testResult" style="margin-top:10px;" class="small"></div>
     </fieldset>
     <div class="small" id="pp_history">${t('formulas.versionHistory')}: …</div>
@@ -1259,12 +1261,13 @@ function openProductPricingModal(typeId){
       (hist.length? hist.map(h=>`v${h.version} ${t('formulas.by')} ${h.by} ${t('formulas.on')} ${fmtDateTime(h.at)}`).join(' · ') : t('formulas.none'));
   });
 }
-function testProductPricing(){
+function testProductPricing(typeId){
+  const cfg = CATEGORY_CONFIG[typeId] || {unit:'mm'};
   const base = Number(document.getElementById('pp_base').value)||0;
   const rate = Number(document.getElementById('pp_rate').value)||0;
   const w = Number(document.getElementById('pp_testW').value)||0;
   const h = Number(document.getElementById('pp_testH').value)||0;
-  const areaSqFt = (w/304.8)*(h/304.8);
+  const areaSqFt = cfg.unit==='in' ? (w*h)/144 : (w/304.8)*(h/304.8);
   const price = base + rate*areaSqFt;
   document.getElementById('pp_testResult').innerHTML = `${t('pricing.testResultLabel')}: <b>$${price.toFixed(2)}</b> (${areaSqFt.toFixed(2)} sq ft)`;
 }
@@ -1377,7 +1380,7 @@ function testFormula(typeId){
   document.getElementById('ff_testResult').innerHTML = res.ok ?
     (res.warnings.length? res.warnings.map(w=>`<div class="banner warn">${esc(w)}</div>`).join(''):'') +
     `<table class="calcTable"><thead><tr><th>${t('th.component')}</th><th>${t('th.cutLength')}</th><th>${t('th.qtyPerUnit')}</th><th>${t('th.totalQty')}</th></tr></thead><tbody>${res.components.map(c=>`<tr><td>${esc(state.lang==='zh'?c.labelZh:c.label)}</td><td class="num">${c.length}</td><td class="num">${c.qtyEach}</td><td class="num">${c.totalQty}</td></tr>`).join('')}</tbody></table>`
-      + (res.glass ? `<table class="calcTable" style="margin-top:8px;"><thead><tr><th>${t('th.glass')}</th><th>${t('th.widthMm')}</th><th>${t('th.heightMm')}</th></tr></thead><tbody>${res.glass.map(g=>`<tr><td>${esc(state.lang==='zh'?g.labelZh:g.label)}</td><td class="num">${g.widthDisplay}</td><td class="num">${g.heightDisplay}</td></tr>`).join('')}</tbody></table>` : '')
+      + (res.glass ? `<table class="calcTable" style="margin-top:8px;"><thead><tr><th>${t('th.glass')}</th><th>${t('th.widthIn')}</th><th>${t('th.heightIn')}</th></tr></thead><tbody>${res.glass.map(g=>`<tr><td>${esc(state.lang==='zh'?g.labelZh:g.label)}</td><td class="num">${g.widthDisplay}</td><td class="num">${g.heightDisplay}</td></tr>`).join('')}</tbody></table>` : '')
       + (res.areaM2!=null ? `<div class="small" style="margin-top:6px;">Area: ${res.areaM2} m²</div>` : '')
     : `<div class="banner error">${esc(res.error)}</div>`;
 }
