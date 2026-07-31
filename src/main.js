@@ -1082,7 +1082,11 @@ async function generateInvoice(orderId){
   const label = (en,zh) => showEn&&showZh? `${en} / ${zh}` : showZh ? zh : en;
 
   const q = o.quote;
-  const useSnapshot = (q.status==='sent' || q.status==='approved') && q.snapshot;
+  // Only an approved quote is actually locked from further edits — a "sent"
+  // quote can still be freely revised (manual items, discount, etc.), so
+  // the invoice must reflect live totals until it's truly approved,
+  // otherwise edits made after sending would silently not show up here.
+  const useSnapshot = q.status==='approved' && q.snapshot;
   let subtotalCents, discountPct, taxPct, discountCents, taxCents, totalCents, lineRows, excludedCount;
   if(useSnapshot){
     const snap = q.snapshot;
@@ -1116,7 +1120,7 @@ async function generateInvoice(orderId){
   }
   const depositCents = Math.round((Number(o.deposit)||0)*100);
   const balanceDueCents = totalCents - depositCents;
-  const provisional = q.status==='draft';
+  const provisional = q.status!=='approved';
 
   const sheet = `
     <div class="fsheet">
@@ -1128,7 +1132,7 @@ async function generateInvoice(orderId){
           <div class="small">${label('Invoice #','发票号')}: ${o.orderNo}-INV${version} &nbsp; ${label('Date','日期')}: ${fmtDate(new Date().toISOString())}</div>
         </div>
       </div>
-      ${provisional ? `<div class="banner warn">⚠ ${label('PROVISIONAL — this quote has not been sent to or approved by the client yet. Totals may still change.','临时版本 — 该报价尚未发送给客户或客户尚未批准，总额可能仍会变动。')}</div>` : ''}
+      ${provisional ? `<div class="banner warn">⚠ ${label('PROVISIONAL — this quote has not been approved by the client yet. Totals reflect the current order and may still change.','临时版本 — 该报价尚未经客户批准，总额反映当前订单内容，可能仍会变动。')}</div>` : ''}
       <div class="metaGrid">
         <div><b>${label('Bill To','账单地址')}:</b> ${esc(client.fullName)}${client.company?' — '+esc(client.company):''}<br>${esc(client.billingAddress)}<br>${esc(client.phone1)}${client.email?' · '+esc(client.email):''}</div>
         <div><b>${label('Project Address','项目地址')}:</b> ${esc(o.projectAddress)}</div>
