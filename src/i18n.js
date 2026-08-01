@@ -452,6 +452,26 @@ export const CATEGORY_CONFIG = {
   door_6ft_lowe_clr:     { unit:'in', dims:[], kind:'door', doorId:'DOR-6-LOWE-CLR' },
   door_6ft_std:          { unit:'in', dims:[], kind:'door', doorId:'DOR-6-STD' },
 };
+// Reference photo per product, shown on the quote/invoice next to each line
+// item so the client can see what they're buying. Sourced from
+// homefortunewindows.com's product category photos where the shape matches
+// closely enough, plus two custom photos for 4000 XOX and 4000 Stacked O/X
+// (not represented on the site). Left unset where no accurate photo exists
+// yet (HMST82 Fixed, HMST82 XOX, HMST82 Lower/Upper-Sash Hung, 4000
+// Fixed-over-XOX) — intentional, per instruction, rather than showing a
+// mismatched stand-in.
+export const PRODUCT_PHOTOS = {
+  hmst82_xo_ox:          '/assets/products/product-03-slider.png',
+  p4000_x:               '/assets/products/product-02-awning.png',
+  p4000_xx:              '/assets/products/product-01-casement.png',
+  p4000_ox:              '/assets/products/product-01-casement.png',
+  p4000_xox:             '/assets/products/product-4000-xox.png',
+  p4000_stacked_ox:      '/assets/products/product-4000-stacked-ox.png',
+  custom_shape:          '/assets/products/product-04-bay-bow.png',
+  door_6ft_lowe_i89:     '/assets/products/product-05-patio-door.png',
+  door_6ft_lowe_clr:     '/assets/products/product-05-patio-door.png',
+  door_6ft_std:          '/assets/products/product-05-patio-door.png',
+};
 // Stored value is always the English string (canonical data); zh is the display label only.
 export const OPENING_STYLES = [
   {en:'Fixed', zh:'固定'}, {en:'Left Hand', zh:'左开'}, {en:'Right Hand', zh:'右开'}, {en:'Top Hinge', zh:'上悬'},

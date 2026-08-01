@@ -3,7 +3,7 @@ import * as D from './data.js';
 import * as C from './calc-engine.js';
 import {
   t, tf, actMsg, esc, fmtDate, fmtDateTime, opt, optionsHtml, optById, optionsHtmlById, statusLabel, pname, productLabel, opt2en, opt2zh,
-  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, OPENING_STYLES, GLASS_TYPES, FRAME_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
+  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, PRODUCT_PHOTOS, OPENING_STYLES, GLASS_TYPES, FRAME_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
   canEdit, isAdmin,
 } from './i18n.js';
 
@@ -833,14 +833,23 @@ async function reopenCalc(orderId, itemNo){
 // (e.g. "6 windows: $X" + "Installation (6 x $150): $900" as distinct rows).
 // `s` is a normalized summary: {itemNo,category,width,height,unit,quantity,
 // ok,error,productUnitCents,productLineTotalCents,installUnitCents,installLineTotalCents}
+// A reference photo, where one exists (see PRODUCT_PHOTOS), next to the
+// item description — helps the client confirm they're getting the right
+// product. Left blank for configurations with no accurate match; see
+// PRODUCT_PHOTOS for the reasoning.
+function prodDescHtml(category, text){
+  const photo = PRODUCT_PHOTOS[category];
+  if(!photo) return esc(text);
+  return `<div style="display:flex;align-items:center;gap:8px;"><img src="${photo}" class="prodThumb" alt="" onerror="this.style.display='none'">${esc(text)}</div>`;
+}
 function quoteLineRowsHtml(s){
-  if(!s.ok) return `<tr><td>${esc(s.itemNo)} — ${esc(productLabel(s.category))}</td><td colspan="2" class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
+  if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`)}</td><td colspan="2" class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
   // Older quotes sent before installation had its own breakdown won't have
   // productUnitCents/installLineTotalCents in their frozen snapshot — fall
   // back to the combined total so they still render (just without the split).
   const productUnitCents = s.productUnitCents ?? s.unitCents;
   const productLineTotalCents = s.productLineTotalCents ?? s.lineTotalCents;
-  let html = `<tr><td>${esc(s.itemNo)} — ${esc(productLabel(s.category))} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})</td><td class="num">$${C.fmtCents(productUnitCents)}</td><td class="num">$${C.fmtCents(productLineTotalCents)}</td></tr>`;
+  let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`)}</td><td class="num">$${C.fmtCents(productUnitCents)}</td><td class="num">$${C.fmtCents(productLineTotalCents)}</td></tr>`;
   if(s.installLineTotalCents){
     html += `<tr><td class="small">${t('quote.installFeeLine')} — ${esc(s.itemNo)} (${s.quantity} × $${C.fmtCents(s.installUnitCents)})</td><td class="num">$${C.fmtCents(s.installUnitCents)}</td><td class="num">$${C.fmtCents(s.installLineTotalCents)}</td></tr>`;
   }
