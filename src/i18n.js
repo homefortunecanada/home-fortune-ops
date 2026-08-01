@@ -144,6 +144,7 @@ export const I18N = {
     'quote.basePrice':'Base price','quote.sizeArea':'Size {w}×{h}{unit} ({area} sq ft)','quote.glassUpgrade':'Glass upgrade',
     'quote.doorPrice':'Patio door price','quote.error.selectFrame':'Select a frame type for this item.','quote.error.selectGlass':'Select a glass type for this item.',
     'quote.minimumApplied':'Window minimum charge applied (below calculated size price)','quote.installFeeLine':'Installation',
+    'quote.extraGlassLine':'Extra glass pane surcharge','pricing.extraGlassSurchargeLbl':'Extra glass surcharge ($, for XOX-family configurations)',
     'form.frameType':'Frame type *','form.installRequested':'Include installation? (${fee}/window)',
     'quote.colourUpgrade':'Colour upgrade','quote.screenUpgrade':'Screen upgrade','quote.hardwareUpgrade':'Hardware upgrade',
     'quote.gridSurcharge':'Grid / grille surcharge','quote.estimatedPrice':'Estimated price','quote.perUnit':'per unit',
@@ -166,7 +167,7 @@ export const I18N = {
     'quote.reopenConfirm':'Reopen this approved quote for editing? Any approved material calculations on this order will be reset to draft and will need to be recalculated once the quote is re-approved. This should only be done by an authorized administrator.',
 
     'formulas.tabMaterials':'Material Formulas','formulas.tabPricing':'Quote Pricing',
-    'th.basePrice':'Base Price','th.pricePerSqFt':'Price / sq ft','th.ratePerSqFt':'Rate ($/sq ft)','th.minimumCharge':'Minimum Charge','th.flatPrice':'Flat Price',
+    'th.basePrice':'Base Price','th.pricePerSqFt':'Price / sq ft','th.ratePerSqFt':'Rate ($/sq ft)','th.minimumCharge':'Minimum Charge','th.flatPrice':'Flat Price','th.extraGlassSurcharge':'Extra Glass Surcharge',
     'pricing.realNote':'Real Home Fortune pricing, verified against Home_Fortune_Pricing_Workbook.xlsx. A window\'s price is (frame rate + glass rate) × sq ft, or the configuration minimum, whichever is higher — plus installation if requested. Sales tax is not set globally; adjust it per quote.',
     'pricing.frameTypesTitle':'Frame Types ($/sq ft)','pricing.glassTypesTitle':'Glass Types ($/sq ft)',
     'pricing.minimumsTitle':'Window Configuration Minimum Charges','pricing.minimumsDesc':'The floor price for each window configuration — charged instead of the size-based price whenever the size price would be lower.',
@@ -331,6 +332,7 @@ export const I18N = {
     'quote.basePrice':'基础价格','quote.sizeArea':'尺寸 {w}×{h}{unit}（{area} 平方英尺）','quote.glassUpgrade':'玻璃升级',
     'quote.doorPrice':'露台门价格','quote.error.selectFrame':'请为该项目选择窗框类型。','quote.error.selectGlass':'请为该项目选择玻璃类型。',
     'quote.minimumApplied':'已按窗型最低收费计价（高于计算所得的面积价格）','quote.installFeeLine':'安装费',
+    'quote.extraGlassLine':'额外玻璃件附加费','pricing.extraGlassSurchargeLbl':'额外玻璃附加费 ($，适用于 XOX 系列窗型)',
     'form.frameType':'窗框类型 *','form.installRequested':'是否需要安装？（每扇 ${fee}）',
     'quote.colourUpgrade':'颜色升级','quote.screenUpgrade':'纱窗升级','quote.hardwareUpgrade':'五金升级',
     'quote.gridSurcharge':'格条/网格附加费','quote.estimatedPrice':'预估价格','quote.perUnit':'每件',
@@ -353,7 +355,7 @@ export const I18N = {
     'quote.reopenConfirm':'确定要重新打开这个已批准的报价以进行编辑吗？此订单上所有已批准的物料计算都将被重置为草稿状态，并需要在报价重新批准后重新计算。此操作应仅由授权管理员执行。',
 
     'formulas.tabMaterials':'物料计算公式','formulas.tabPricing':'报价定价',
-    'th.basePrice':'基础价格','th.pricePerSqFt':'每平方英尺价格','th.ratePerSqFt':'单价（$/平方英尺）','th.minimumCharge':'最低收费','th.flatPrice':'固定价格',
+    'th.basePrice':'基础价格','th.pricePerSqFt':'每平方英尺价格','th.ratePerSqFt':'单价（$/平方英尺）','th.minimumCharge':'最低收费','th.flatPrice':'固定价格','th.extraGlassSurcharge':'额外玻璃附加费',
     'pricing.realNote':'家福门窗真实价格，已与 Home_Fortune_Pricing_Workbook.xlsx 核对无误。窗户价格＝（窗框单价＋玻璃单价）×平方英尺，与该窗型最低收费相比取较高者，另加安装费（如需要）。销售税未设全局值，请在每个报价中单独调整。',
     'pricing.frameTypesTitle':'窗框类型（$/平方英尺）','pricing.glassTypesTitle':'玻璃类型（$/平方英尺）',
     'pricing.minimumsTitle':'窗型最低收费','pricing.minimumsDesc':'每种窗型的最低收费 — 当面积计价低于此值时，改按此最低收费计价。',

@@ -828,9 +828,9 @@ async function reopenCalc(orderId, itemNo){
 
 /* ================= CLIENT QUOTE ================= */
 // Renders 1-2 <tr> rows for a quote/invoice line item: the window/door
-// itself, plus a SEPARATE row for installation if it was requested — never
-// folded into one opaque number (e.g. "6 windows: $X" + "Installation
-// (6 x $150): $900" as distinct rows, not a single blended unit price).
+// itself (its price already includes any XOX extra-glass surcharge, folded
+// in silently), plus a SEPARATE row for installation if it was requested
+// (e.g. "6 windows: $X" + "Installation (6 x $150): $900" as distinct rows).
 // `s` is a normalized summary: {itemNo,category,width,height,unit,quantity,
 // ok,error,productUnitCents,productLineTotalCents,installUnitCents,installLineTotalCents}
 function quoteLineRowsHtml(s){
@@ -1272,6 +1272,7 @@ function renderPricingTab(){
       <td>${pr.active? `<span class="badge done">${t('formulas.active')}</span>` : `<span class="badge hold">${t('formulas.inactive')}</span>`}</td>
       <td>v${pr.version}</td>
       <td>$${pr.basePrice}</td>
+      <td>${pr.extraGlassSurcharge?`$${pr.extraGlassSurcharge}`:'—'}</td>
       <td class="small">${esc(pr.changedBy)}<br>${fmtDateTime(pr.changedAt)}</td>
       <td><button class="btn ghost" onclick="openProductPricingModal('${p.id}')">${t('common.edit')}</button></td>
     </tr>`;
@@ -1313,7 +1314,7 @@ function renderPricingTab(){
     <div class="card">
       <h3 style="margin-top:0;font-size:14px;color:var(--navy);">${t('pricing.minimumsTitle')}</h3>
       <div class="small" style="margin-bottom:6px;">${t('pricing.minimumsDesc')}</div>
-      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.minimumCharge')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
+      <table><thead><tr><th>${t('th.product')}</th><th>${t('th.status')}</th><th>${t('th.versionCol')}</th><th>${t('th.minimumCharge')}</th><th>${t('th.extraGlassSurcharge')}</th><th>${t('th.lastChanged')}</th><th></th></tr></thead>
       <tbody>${minRows}</tbody></table>
     </div>
     <div class="card">
@@ -1342,6 +1343,7 @@ function openProductPricingModal(typeId){
       <div class="field"><label>${t('formulas.active')}</label><select id="pp_active"><option value="1" ${pr.active?'selected':''}>${t('formulas.active')}</option><option value="0" ${!pr.active?'selected':''}>${t('formulas.inactive')}</option></select></div>
       <div class="field"><label>${t('formulas.version')}</label><input value="v${pr.version} ${t('formulas.autoIncrement')}" disabled></div>
       <div class="field"><label>${t('pricing.minimumChargeLbl')}</label><input type="number" step="0.01" id="pp_min" value="${pr.basePrice}"></div>
+      <div class="field"><label>${t('pricing.extraGlassSurchargeLbl')}</label><input type="number" step="0.01" id="pp_extraGlass" value="${pr.extraGlassSurcharge||0}"></div>
     </div>
     <fieldset><legend>${t('pricing.testMinimumTitle')}</legend>
       <div class="grid cols-3">
@@ -1379,6 +1381,7 @@ async function saveProductPricing(typeId){
     active: document.getElementById('pp_active').value==='1',
     basePrice: Number(document.getElementById('pp_min').value)||0,
     pricePerSqFt: 0,
+    extraGlassSurcharge: Number(document.getElementById('pp_extraGlass').value)||0,
   };
   try{
     await D.saveProductPricing(typeId, draft);

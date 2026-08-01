@@ -329,7 +329,12 @@ export function computeQuoteLine(item, pricing){
   const sizeCents = Math.round(combinedRate*100*areaSqFt);
   const minimumCents = Math.round(prod.basePrice*100);
   const usedMinimum = minimumCents > sizeCents;
-  const productCents = Math.max(sizeCents, minimumCents);
+  // XOX-family configurations need an extra pane of glass (the centre fixed
+  // panel) beyond what the standard per-sq-ft pricing accounts for — folded
+  // directly into the window's own price (not shown as a separate charge),
+  // unlike installation below. See pricing_products.extra_glass_surcharge.
+  const extraGlassCents = Math.round((prod.extraGlassSurcharge||0)*100);
+  const productCents = Math.max(sizeCents, minimumCents) + extraGlassCents;
   const installCents = item.installRequested ? (pricing.modifiers.installFeeCents||0) : 0;
 
   const lines = [
@@ -339,11 +344,12 @@ export function computeQuoteLine(item, pricing){
   if(installCents) lines.push({key:'install', label:t('quote.installFeeLine'), cents:installCents});
 
   const qty = Number(item.quantity)||1;
-  // unitCents/lineTotalCents are the combined per-unit/total price (product +
-  // install) — used for subtotal math. productLineTotalCents/installLineTotalCents
-  // split that same total back out so the UI can show installation as its own
-  // line (e.g. "6 windows: $X" + "Installation (6 x $150): $900"), not folded
-  // silently into one number.
+  // unitCents/lineTotalCents are the combined per-unit/total price (product,
+  // which already includes any extra-glass surcharge, + install) — used for
+  // subtotal math. productLineTotalCents/installLineTotalCents split that
+  // same total back out so the UI can show installation as its own line
+  // (e.g. "6 windows: $X" + "Installation (6 x $150): $900"); the extra-glass
+  // surcharge stays folded into the window's own price, not broken out.
   const unitCents = productCents + installCents;
   const lineTotalCents = unitCents * qty;
   return {

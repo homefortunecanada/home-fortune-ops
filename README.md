@@ -137,6 +137,12 @@ documented at the top of the file):
    setting and the item-level "include installation?" column. **Required**
    for any window/door item's price to calculate correctly — without it,
    every item will show a pricing error.
+8. `008_xox_extra_glass_surcharge.sql` — adds a flat per-window surcharge
+   for XOX-family configurations (extra centre glass pane): +$80 for HMST82
+   XOX and 4000 XOX, +$160 for 4000 Fixed-over-XOX. Folded silently into
+   the window's own price on the quote/invoice (not a separate line, unlike
+   installation). Editable under Formula Admin → Quote Pricing → Window
+   Configuration Minimum Charges.
 
 ## Known gaps / next steps
 

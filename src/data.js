@@ -94,6 +94,7 @@ function mapPricingProductRow(row){
   return {
     productType: row.product_type, active: row.active, version: row.version,
     basePrice: Number(row.base_price), pricePerSqFt: Number(row.price_per_sqft),
+    extraGlassSurcharge: Number(row.extra_glass_surcharge)||0,
     changedById: row.changed_by, changedBy: profileName(row.changed_by), changedAt: row.changed_at,
   };
 }
@@ -183,7 +184,8 @@ export async function saveProductPricing(productType, draft){
   }catch(e){ /* see README: pricing_product_history has no INSERT policy yet */ }
   await call(supabase.from('pricing_products').update({
     active: draft.active, version: current.version + 1, base_price: draft.basePrice,
-    price_per_sqft: draft.pricePerSqFt, changed_by: state.user.id, changed_at: new Date().toISOString(),
+    price_per_sqft: draft.pricePerSqFt, extra_glass_surcharge: draft.extraGlassSurcharge,
+    changed_by: state.user.id, changed_at: new Date().toISOString(),
   }).eq('product_type', productType));
   await insertActivity('updatedPricingProduct', { type: productType, v: current.version + 1 });
   await loadPricing();
