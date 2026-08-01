@@ -827,6 +827,31 @@ async function reopenCalc(orderId, itemNo){
 }
 
 /* ================= CLIENT QUOTE ================= */
+// Renders 1-2 <tr> rows for a quote/invoice line item: the window/door
+// itself, plus a SEPARATE row for installation if it was requested — never
+// folded into one opaque number (e.g. "6 windows: $X" + "Installation
+// (6 x $150): $900" as distinct rows, not a single blended unit price).
+// `s` is a normalized summary: {itemNo,category,width,height,unit,quantity,
+// ok,error,productUnitCents,productLineTotalCents,installUnitCents,installLineTotalCents}
+function quoteLineRowsHtml(s){
+  if(!s.ok) return `<tr><td>${esc(s.itemNo)} — ${esc(productLabel(s.category))}</td><td colspan="2" class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
+  // Older quotes sent before installation had its own breakdown won't have
+  // productUnitCents/installLineTotalCents in their frozen snapshot — fall
+  // back to the combined total so they still render (just without the split).
+  const productUnitCents = s.productUnitCents ?? s.unitCents;
+  const productLineTotalCents = s.productLineTotalCents ?? s.lineTotalCents;
+  let html = `<tr><td>${esc(s.itemNo)} — ${esc(productLabel(s.category))} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})</td><td class="num">$${C.fmtCents(productUnitCents)}</td><td class="num">$${C.fmtCents(productLineTotalCents)}</td></tr>`;
+  if(s.installLineTotalCents){
+    html += `<tr><td class="small">${t('quote.installFeeLine')} — ${esc(s.itemNo)} (${s.quantity} × $${C.fmtCents(s.installUnitCents)})</td><td class="num">$${C.fmtCents(s.installUnitCents)}</td><td class="num">$${C.fmtCents(s.installLineTotalCents)}</td></tr>`;
+  }
+  return html;
+}
+function liveResultToSummary(r){
+  return { itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height, unit:r.item.unit,
+    quantity:r.item.quantity, ok:r.q.ok, error:r.q.error,
+    productUnitCents:r.q.productUnitCents, productLineTotalCents:r.q.productLineTotalCents,
+    installUnitCents:r.q.installUnitCents, installLineTotalCents:r.q.installLineTotalCents };
+}
 function renderQuoteSummary(o){
   const manualItems = o.quote.manualItems || [];
   if(o.items.length===0 && manualItems.length===0 && !canEdit()){
@@ -844,10 +869,7 @@ function renderQuoteSummary(o){
   const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
   const locked = q.status==='approved';
 
-  const rows = live.results.map(r=> r.q.ok
-    ? `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))} (${r.item.width}×${r.item.height}mm × ${r.item.quantity})</td><td class="num">$${C.fmtCents(r.q.unitCents)}</td><td class="num">$${C.fmtCents(r.q.lineTotalCents)}</td></tr>`
-    : `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))}</td><td colspan="2" class="small" style="color:var(--red);">${t('quote.manualQuoteRequired')}</td></tr>`
-  ).join('');
+  const rows = live.results.map(r => quoteLineRowsHtml(liveResultToSummary(r))).join('');
   const manualRows = manualItems.map(mi => `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td>
     <td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}
     ${canEdit()&&!locked?` <button class="btn ghost" style="padding:2px 6px;" onclick="removeManualItem('${o.id}','${mi.id}')">✕</button>`:''}</td></tr>`).join('');
@@ -969,8 +991,10 @@ async function sendQuoteToClient(orderId){
       subtotalCents, discountPct:q.discountPct||0, taxPct:q.taxPct||0,
       discountCents, taxCents, calculatedTotalCents, manualTotalCents: hasOverride?q.manualTotalCents:null, totalCents,
       generatedAt: new Date().toISOString(),
-      items: live.results.map(r=>({itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height,
-        quantity:r.item.quantity, ok:r.q.ok, unitCents:r.q.ok?r.q.unitCents:null, lineTotalCents:r.q.ok?r.q.lineTotalCents:null})),
+      items: live.results.map(r=>({itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height, unit:r.item.unit,
+        quantity:r.item.quantity, ok:r.q.ok, error:r.q.error, unitCents:r.q.ok?r.q.unitCents:null, lineTotalCents:r.q.ok?r.q.lineTotalCents:null,
+        productUnitCents:r.q.ok?r.q.productUnitCents:null, productLineTotalCents:r.q.ok?r.q.productLineTotalCents:null,
+        installUnitCents:r.q.ok?r.q.installUnitCents:null, installLineTotalCents:r.q.ok?r.q.installLineTotalCents:null})),
       manualItems,
     };
     const nextStatus = ['New Inquiry','Measurement Required','Measurements Completed','Quote In Progress'].includes(o.status) ? 'Customer Approval Required' : null;
@@ -1140,13 +1164,7 @@ async function generateInvoice(orderId){
     subtotalCents = snap.subtotalCents; discountPct = snap.discountPct; taxPct = snap.taxPct;
     discountCents = snap.discountCents; taxCents = snap.taxCents; totalCents = snap.totalCents;
     excludedCount = snap.items.filter(s=>!s.ok).length;
-    lineRows = snap.items.map(s=>{
-      const it = o.items.find(i=>i.itemNo===s.itemNo);
-      const desc = it ? `${esc(s.itemNo)} — ${esc(productLabel(it.category))} (${it.width}×${it.height}${it.unit} × ${s.quantity})` : esc(s.itemNo);
-      return s.ok
-        ? `<tr><td>${desc}</td><td class="num">$${C.fmtCents(s.unitCents)}</td><td class="num">$${C.fmtCents(s.lineTotalCents)}</td></tr>`
-        : `<tr><td>${desc}</td><td colspan="2" class="small" style="color:var(--red);">${label('Manual quote required','需要手动报价')}</td></tr>`;
-    });
+    lineRows = snap.items.map(s => quoteLineRowsHtml(s));
     (snap.manualItems||[]).forEach(mi => lineRows.push(
       `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td><td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}</td></tr>`));
   } else {
@@ -1159,9 +1177,7 @@ async function generateInvoice(orderId){
     taxCents = Math.round(taxableCents*taxPct/100);
     totalCents = q.manualTotalCents!=null ? q.manualTotalCents : taxableCents+taxCents;
     excludedCount = live.excludedCount;
-    lineRows = live.results.map(r=> r.q.ok
-      ? `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))} (${r.item.width}×${r.item.height}${r.item.unit} × ${r.item.quantity})</td><td class="num">$${C.fmtCents(r.q.unitCents)}</td><td class="num">$${C.fmtCents(r.q.lineTotalCents)}</td></tr>`
-      : `<tr><td>${esc(r.item.itemNo)} — ${esc(productLabel(r.item.category))}</td><td colspan="2" class="small" style="color:var(--red);">${label('Manual quote required','需要手动报价')}</td></tr>`);
+    lineRows = live.results.map(r => quoteLineRowsHtml(liveResultToSummary(r)));
     manualItems.forEach(mi => lineRows.push(
       `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td><td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}</td></tr>`));
   }

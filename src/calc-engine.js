@@ -304,9 +304,13 @@ export function computeQuoteLine(item, pricing){
   if(cfg.kind === 'door'){
     const door = pricing.patioDoors[cfg.doorId];
     if(!door || !door.active) return {ok:false, error:t('quote.error.inactive')};
+    const doorQty = Number(item.quantity)||1;
     const unitCents = door.flatPriceCents;
-    const lineTotalCents = unitCents * (Number(item.quantity)||1);
-    return {ok:true, lines:[{key:'door', label:t('quote.doorPrice'), cents:unitCents}], unitCents, lineTotalCents, version:door.version};
+    const lineTotalCents = unitCents * doorQty;
+    return {
+      ok:true, lines:[{key:'door', label:t('quote.doorPrice'), cents:unitCents}], unitCents, lineTotalCents, version:door.version,
+      productUnitCents: unitCents, productLineTotalCents: lineTotalCents, installUnitCents: 0, installLineTotalCents: 0,
+    };
   }
 
   const prod = pricing.products[item.category];
@@ -334,9 +338,19 @@ export function computeQuoteLine(item, pricing){
   if(usedMinimum) lines.push({key:'minimum', label:t('quote.minimumApplied'), cents:minimumCents-sizeCents});
   if(installCents) lines.push({key:'install', label:t('quote.installFeeLine'), cents:installCents});
 
+  const qty = Number(item.quantity)||1;
+  // unitCents/lineTotalCents are the combined per-unit/total price (product +
+  // install) — used for subtotal math. productLineTotalCents/installLineTotalCents
+  // split that same total back out so the UI can show installation as its own
+  // line (e.g. "6 windows: $X" + "Installation (6 x $150): $900"), not folded
+  // silently into one number.
   const unitCents = productCents + installCents;
-  const lineTotalCents = unitCents * (Number(item.quantity)||1);
-  return {ok:true, lines, unitCents, lineTotalCents, version:prod.version, usedMinimum};
+  const lineTotalCents = unitCents * qty;
+  return {
+    ok:true, lines, unitCents, lineTotalCents, version:prod.version, usedMinimum,
+    productUnitCents: productCents, productLineTotalCents: productCents*qty,
+    installUnitCents: installCents, installLineTotalCents: installCents*qty,
+  };
 }
 export function computeOrderQuoteLive(items, pricing){
   const results = items.map(it => ({item:it, q: computeQuoteLine(it, pricing)}));
