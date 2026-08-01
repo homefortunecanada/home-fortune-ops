@@ -1218,7 +1218,7 @@ async function generateInvoice(orderId){
         </tbody>
       </table>
       ${o.paymentNotes?`<div class="small" style="margin-top:8px;"><b>${label('Payment Notes','付款备注')}:</b> ${esc(o.paymentNotes)}</div>`:''}
-      <div class="footNote">${label('Invoice version','发票版本')} ${version}. ${label('Pricing shown uses SAMPLE placeholder rates — not Home Fortune\'s real, approved price list yet.','所示价格为示例占位费率 — 并非家福门窗真实、已核准的价目表。')}</div>
+      <div class="footNote">${label('Invoice version','发票版本')} ${version}. ${label('Pricing per Home Fortune\'s approved price list.','所示价格依据家福门窗已核准的价目表。')}</div>
     </div>`;
   document.getElementById('printSheet').innerHTML = sheet;
 
