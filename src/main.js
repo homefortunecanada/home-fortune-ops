@@ -850,7 +850,7 @@ async function reopenCalc(orderId, itemNo){
 function prodDescHtml(category, text){
   const photo = PRODUCT_PHOTOS[category];
   if(!photo) return esc(text);
-  return `<div style="display:flex;align-items:center;gap:8px;"><img src="${photo}" class="prodThumb" alt="" onerror="this.style.display='none'">${esc(text)}</div>`;
+  return `<div style="display:flex;align-items:center;gap:14px;"><img src="${photo}" class="prodThumb" alt="" onerror="this.style.display='none'">${esc(text)}</div>`;
 }
 function quoteLineRowsHtml(s){
   if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`)}</td><td colspan="2" class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
