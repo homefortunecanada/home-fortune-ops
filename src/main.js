@@ -580,6 +580,13 @@ function diagramSVG(category){
   }
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${inner}</svg>`;
 }
+// Real reference photo where one exists (see PRODUCT_PHOTOS); falls back to
+// the schematic line-drawing for configurations with no accurate photo yet.
+function productVisualHtml(category){
+  const photo = PRODUCT_PHOTOS[category];
+  if(!photo) return diagramSVG(category);
+  return `<img src="${photo}" alt="" style="max-width:100%;max-height:80px;object-fit:contain;" onerror="this.style.display='none'">`;
+}
 
 function renderItemCard(o, it){
   const cfg = CATEGORY_CONFIG[it.category] || {};
@@ -597,9 +604,12 @@ function renderItemCard(o, it){
           ${canEdit()?`<button class="btn ghost" onclick="duplicateItem('${o.id}','${it.itemNo}')">${t('item.duplicate')}</button>`:''}
         </div>
       </div>
-      <div class="small">
-        <div><b>${t('item.room')}:</b> ${esc(it.room)||t('common.na')}</div>
-        ${priceHtml}
+      <div class="grid cols-3">
+        <div class="diagram">${productVisualHtml(it.category)}</div>
+        <div class="small">
+          <div><b>${t('item.room')}:</b> ${esc(it.room)||t('common.na')}</div>
+          ${priceHtml}
+        </div>
       </div>
     </div>`;
   }
@@ -637,7 +647,7 @@ function renderItemCard(o, it){
       </div>
     </div>
     <div class="grid cols-3">
-      <div class="diagram">${diagramSVG(it.category)}</div>
+      <div class="diagram">${productVisualHtml(it.category)}</div>
       <div class="small">
         <div><b>${t('item.opening')}:</b> ${esc(opt(OPENING_STYLES,it.openingStyle))}</div>
         <div><b>${t('item.glass')}:</b> ${esc(optById(GLASS_TYPES,it.glassType))} (${esc(it.glassThickness)})</div>
@@ -735,7 +745,7 @@ function refreshItemFormFields(it){
   const cfg = CATEGORY_CONFIG[cat] || {};
   if(cfg.kind !== 'door'){
     refreshAutoO();
-    document.getElementById('diagramPreview').innerHTML = diagramSVG(cat);
+    document.getElementById('diagramPreview').innerHTML = productVisualHtml(cat);
   }
 }
 function refreshAutoO(){
