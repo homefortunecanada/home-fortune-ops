@@ -1106,7 +1106,7 @@ async function generateFactorySheet(orderId){
     <div class="fsheet">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div><h2 style="margin:0;">家福门窗 Home Fortune Windows &amp; Doors</h2>
-        <div class="small">120–8812 Laurel Street, Vancouver, BC V6P 3V8 · 604 349 9180 · homefortunecanada@gmail.com</div></div>
+        <div class="small">120–8812 Laurel Street, Vancouver, BC V6P 3V8 · <span style="white-space:nowrap;">604 349 9180</span> · homefortunecanada@gmail.com</div></div>
         <div style="text-align:right;">
           <div style="font-weight:800;font-size:16px;color:var(--navy);">${label('FACTORY PRODUCTION SHEET','工厂生产单')}</div>
           <div class="small">${label('Order','订单')}: ${o.orderNo} · v${version}</div>
@@ -1208,7 +1208,8 @@ async function generateInvoice(orderId){
     <div class="fsheet">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
         <div><h2 style="margin:0;">家福门窗 Home Fortune Windows &amp; Doors</h2>
-        <div class="small">120–8812 Laurel Street, Vancouver, BC V6P 3V8 · 604 349 9180 · homefortunecanada@gmail.com</div></div>
+        <div class="small">120–8812 Laurel Street, Vancouver, BC V6P 3V8 · <span style="white-space:nowrap;">604 349 9180</span></div>
+        <div class="small">homefortunecanada@gmail.com · homefortunewindows.com</div></div>
         <div style="text-align:right;">
           <div style="font-weight:800;font-size:16px;color:var(--navy);">${label('INVOICE','发票')}</div>
           <div class="small">${label('Invoice #','发票号')}: ${o.orderNo}-INV${version} &nbsp; ${label('Date','日期')}: ${fmtDate(new Date().toISOString())}</div>
