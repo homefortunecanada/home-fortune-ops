@@ -477,7 +477,7 @@ export const PRODUCT_PHOTOS = {
 // Stored value is always the English string (canonical data); zh is the display label only.
 export const OPENING_STYLES = [
   {en:'Fixed', zh:'固定'}, {en:'Left Hand', zh:'左开'}, {en:'Right Hand', zh:'右开'}, {en:'Top Hinge', zh:'上悬'},
-  {en:'2-Panel XO', zh:'两扇推拉(XO)'}, {en:'3-Panel XOX', zh:'三扇推拉(XOX)'}, {en:'Custom', zh:'定制'}
+  {en:'2-Panel XO', zh:'两扇推拉(XO)'}, {en:'3-Panel XOX', zh:'三扇推拉(XOX)'}, {en:'Vertical Slide', zh:'垂直滑动'}, {en:'Custom', zh:'定制'}
 ];
 // Real Home Fortune glass and frame catalogs (Home_Fortune_Pricing_Workbook.xlsx)
 // — these drive pricing (see pricing_glass_types/pricing_frame_types and
