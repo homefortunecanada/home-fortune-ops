@@ -860,6 +860,24 @@ function quoteLineRowsHtml(s){
   const productUnitCents = s.productUnitCents ?? s.unitCents;
   const productLineTotalCents = s.productLineTotalCents ?? s.lineTotalCents;
   let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`)}</td><td class="num">$${C.fmtCents(productUnitCents)}</td><td class="num">$${C.fmtCents(productLineTotalCents)}</td></tr>`;
+  // A plain-language spec recap (opening/glass/colour/hardware) so the
+  // client can double-check the order matches what they discussed —
+  // doors skip this since they carry no such spec fields.
+  const cfg = CATEGORY_CONFIG[s.category] || {};
+  if(cfg.kind !== 'door' && s.openingStyle!=null){
+    const specBits = [
+      `${t('item.opening')}: ${opt(OPENING_STYLES,s.openingStyle)}`,
+      `${t('item.glass')}: ${optById(GLASS_TYPES,s.glassType)}${s.glassThickness?` (${s.glassThickness})`:''}`,
+      `${t('item.color')}: ${opt(COLORS,s.color)}`,
+      `${t('item.hardware')}: ${opt(HARDWARE,s.hardware)}`,
+    ];
+    html += `<tr><td colspan="3" class="small" style="color:var(--gray-600);">${esc(specBits.join(' · '))}</td></tr>`;
+  }
+  // Screens are included at no charge — an explicit $0.00 line so clients
+  // see it was accounted for, not silently left off the quote.
+  if(cfg.kind !== 'door' && s.screenType && s.screenType!=='None'){
+    html += `<tr><td class="small">${tf('quote.screenIncludedLine',{screen:opt(SCREEN_TYPES,s.screenType)})} — ${esc(s.itemNo)}</td><td class="num">$0.00</td><td class="num">$0.00</td></tr>`;
+  }
   if(s.installLineTotalCents){
     html += `<tr><td class="small">${t('quote.installFeeLine')} — ${esc(s.itemNo)} (${s.quantity} × $${C.fmtCents(s.installUnitCents)})</td><td class="num">$${C.fmtCents(s.installUnitCents)}</td><td class="num">$${C.fmtCents(s.installLineTotalCents)}</td></tr>`;
   }
@@ -869,7 +887,9 @@ function liveResultToSummary(r){
   return { itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height, unit:r.item.unit,
     quantity:r.item.quantity, ok:r.q.ok, error:r.q.error,
     productUnitCents:r.q.productUnitCents, productLineTotalCents:r.q.productLineTotalCents,
-    installUnitCents:r.q.installUnitCents, installLineTotalCents:r.q.installLineTotalCents };
+    installUnitCents:r.q.installUnitCents, installLineTotalCents:r.q.installLineTotalCents,
+    openingStyle:r.item.openingStyle, glassType:r.item.glassType, glassThickness:r.item.glassThickness,
+    color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType };
 }
 function renderQuoteSummary(o){
   const manualItems = o.quote.manualItems || [];
@@ -1013,7 +1033,9 @@ async function sendQuoteToClient(orderId){
       items: live.results.map(r=>({itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height, unit:r.item.unit,
         quantity:r.item.quantity, ok:r.q.ok, error:r.q.error, unitCents:r.q.ok?r.q.unitCents:null, lineTotalCents:r.q.ok?r.q.lineTotalCents:null,
         productUnitCents:r.q.ok?r.q.productUnitCents:null, productLineTotalCents:r.q.ok?r.q.productLineTotalCents:null,
-        installUnitCents:r.q.ok?r.q.installUnitCents:null, installLineTotalCents:r.q.ok?r.q.installLineTotalCents:null})),
+        installUnitCents:r.q.ok?r.q.installUnitCents:null, installLineTotalCents:r.q.ok?r.q.installLineTotalCents:null,
+        openingStyle:r.item.openingStyle, glassType:r.item.glassType, glassThickness:r.item.glassThickness,
+        color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType})),
       manualItems,
     };
     const nextStatus = ['New Inquiry','Measurement Required','Measurements Completed','Quote In Progress'].includes(o.status) ? 'Customer Approval Required' : null;
