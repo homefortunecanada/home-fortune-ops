@@ -672,6 +672,16 @@ function diagramSVG(category, dims){
     }
   } else if(HALF_SPLIT_CATEGORIES.includes(category)){
     shape += `<line x1="${(RX+RX2)/2}" y1="${RY}" x2="${(RX+RX2)/2}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
+  } else if((CATEGORY_CONFIG[category]||{}).kind === 'door'){
+    // Patio doors: 2-panel slider (one fixed, one operable) with a handle
+    // mark on the operable panel and a heavier sill line along the bottom,
+    // so it reads as a floor-to-ceiling door, not a window. Real panel
+    // count/split isn't tracked per product, so this is a representative
+    // schematic rather than a formula-verified one.
+    const midX = (RX+RX2)/2, cy = (RY+RY2)/2, handleX = midX - RW*0.09;
+    shape += `<line x1="${midX}" y1="${RY}" x2="${midX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
+      <line x1="${handleX}" y1="${cy-RH*0.08}" x2="${handleX}" y2="${cy+RH*0.08}" stroke="#5b6673" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="${RX}" y1="${RY2}" x2="${RX2}" y2="${RY2}" stroke="#1f5fa8" stroke-width="4.5"/>`;
   }
   const outerDim = hasWH ? (dimTop(RX,RX2,RY,fmtDimVal(W,unit)) + dimLeft(RY,RY2,RX,fmtDimVal(H,unit))) : '';
   return `<svg width="160" height="130" viewBox="0 0 160 130">${shape}${outerDim}${subDim}</svg>`;
