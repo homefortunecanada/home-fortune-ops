@@ -3,7 +3,7 @@ import * as D from './data.js';
 import * as C from './calc-engine.js';
 import {
   t, tf, actMsg, esc, fmtDate, fmtDateTime, opt, optionsHtml, optById, optionsHtmlById, statusLabel, pname, productLabel, opt2en, opt2zh,
-  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, PRODUCT_PHOTOS, OPENING_STYLES, GLASS_TYPES, FRAME_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
+  ROLES, NAV_BY_ROLE, NAV_ITEMS, PRODUCT_TYPES, CATEGORY_CONFIG, OPENING_STYLES, GLASS_TYPES, FRAME_TYPES, COLORS, SCREEN_TYPES, HARDWARE, PREF_LANGS,
   canEdit, isAdmin,
 } from './i18n.js';
 
@@ -660,15 +660,10 @@ function diagramSVG(category, dims){
   const outerDim = hasWH ? (dimTop(RX,RX2,fmtDimVal(W,unit)) + dimLeft(RY,RY2,fmtDimVal(H,unit))) : '';
   return `<svg width="160" height="130" viewBox="0 0 160 130">${shape}${outerDim}${subDim}</svg>`;
 }
-// Real reference photo where one exists (see PRODUCT_PHOTOS); falls back to
-// the schematic line-drawing (with real dimensions imprinted, if given) for
-// configurations with no accurate photo yet. Dimension lines only ever go on
-// the schematic — there's no way to know where a window's edges fall inside
-// an arbitrary real photo, so photos never get an overlay.
+// Always the schematic line-drawing with real dimensions imprinted, if
+// given — cleaner and easier to read at a glance than a real photo.
 function productVisualHtml(category, dims){
-  const photo = PRODUCT_PHOTOS[category];
-  if(!photo) return diagramSVG(category, dims);
-  return `<img src="${photo}" alt="" style="max-width:100%;max-height:80px;object-fit:contain;" onerror="this.style.display='none'">`;
+  return diagramSVG(category, dims);
 }
 function itemDims(it){ return it && {W:it.width, H:it.height, O:it.dimO, S:it.dimS, T:it.dimT, unit:it.unit}; }
 
@@ -937,22 +932,18 @@ async function reopenCalc(orderId, itemNo){
 // (e.g. "6 windows: $X" + "Installation (6 x $150): $900" as distinct rows).
 // `s` is a normalized summary: {itemNo,category,width,height,unit,quantity,
 // ok,error,productUnitCents,productLineTotalCents,installUnitCents,installLineTotalCents}
-// A reference photo, where one exists (see PRODUCT_PHOTOS), next to the
-// item description — helps the client confirm they're getting the right
-// product. Left blank for configurations with no accurate match; see
-// PRODUCT_PHOTOS for the reasoning.
-function prodDescHtml(category, text){
-  const photo = PRODUCT_PHOTOS[category];
-  if(!photo) return esc(text);
-  return `<div style="display:flex;align-items:center;gap:14px;"><img src="${photo}" class="prodThumb" alt="" onerror="this.style.display='none'">${esc(text)}</div>`;
+// A small dimensioned schematic next to the item description, so the
+// client can confirm size/shape at a glance without a real photo.
+function prodDescHtml(category, text, dims){
+  return `<div style="display:flex;align-items:center;gap:14px;"><div class="prodThumb">${diagramSVG(category, dims)}</div>${esc(text)}</div>`;
 }
 // Neither of these show any per-item or installation price anymore — the
 // customer should only ever see Subtotal/Discount/Tax/Grand Total, never a
 // per-window or per-line breakdown (pricing still computes normally under
 // the hood for that aggregate math, it's just never displayed per line).
 function quoteLineRowsHtml(s){
-  if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`)}</td></tr><tr><td class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
-  let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`)}</td></tr>`;
+  if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`, itemDims(s))}</td></tr><tr><td class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
+  let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`, itemDims(s))}</td></tr>`;
   // A plain-language spec recap (opening/glass/colour/hardware) so the
   // client can double-check the order matches what they discussed —
   // doors skip this since they carry no such spec fields.
