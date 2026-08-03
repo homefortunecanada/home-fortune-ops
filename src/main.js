@@ -567,26 +567,103 @@ function switchOrderTab(btn, tab){
 }
 
 const SLIDING_CATEGORIES = ['hmst82_xo_ox','hmst82_xox','p4000_x','p4000_xx','p4000_ox','p4000_xox','p4000_fixed_over_xox','p4000_stacked_ox'];
-const HUNG_CATEGORIES = ['hmst82_lower_hung','hmst82_upper_hung'];
-function diagramSVG(category){
-  const w=90,h=70;
-  let inner = `<rect x="4" y="4" width="${w-8}" height="${h-8}" fill="none" stroke="#1f5fa8" stroke-width="3"/>`;
-  if(HUNG_CATEGORIES.includes(category)){
-    inner += `<line x1="4" y1="${h/2}" x2="${w-4}" y2="${h/2}" stroke="#96a1ad" stroke-width="1.5"/>`;
-  } else if(SLIDING_CATEGORIES.includes(category)){
-    inner += `<line x1="${w/2}" y1="4" x2="${w/2}" y2="${h-4}" stroke="#96a1ad" stroke-width="1.5"/><polyline points="18,${h/2} 10,${h/2-6} 10,${h/2+6} 18,${h/2}" fill="none" stroke="#96a1ad"/>`;
-  } else if(category==='custom_shape'){
-    inner = `<path d="M4,${h-4} L4,20 A${w/2-4},20 0 0 1 ${w-4},20 L${w-4},${h-4} Z" fill="none" stroke="#1f5fa8" stroke-width="3"/>`;
+function fmtDimVal(n, unit){ return `${n}${unit==='in'?'"':(unit||'mm')}`; }
+// Dimension-line fragments (extension lines + tick marks + text), styled
+// like a factory shop-drawing. Blue/gray for the overall W/H, amber for a
+// sub-dimension (O/S/T) so it reads as a secondary measurement.
+function dimTop(x1,x2,label){
+  return `<line x1="${x1}" y1="18" x2="${x2}" y2="18" stroke="#5b6673" stroke-width="1"/>
+    <line x1="${x1}" y1="14" x2="${x1}" y2="22" stroke="#5b6673" stroke-width="1"/>
+    <line x1="${x2}" y1="14" x2="${x2}" y2="22" stroke="#5b6673" stroke-width="1"/>
+    <line x1="${x1}" y1="30" x2="${x1}" y2="18" stroke="#c8d0d8" stroke-width="0.75"/>
+    <line x1="${x2}" y1="30" x2="${x2}" y2="18" stroke="#c8d0d8" stroke-width="0.75"/>
+    <text x="${(x1+x2)/2}" y="12" text-anchor="middle" font-size="9" fill="#2b323b">${label}</text>`;
+}
+function dimLeft(y1,y2,label){
+  return `<line x1="16" y1="${y1}" x2="16" y2="${y2}" stroke="#5b6673" stroke-width="1"/>
+    <line x1="12" y1="${y1}" x2="20" y2="${y1}" stroke="#5b6673" stroke-width="1"/>
+    <line x1="12" y1="${y2}" x2="20" y2="${y2}" stroke="#5b6673" stroke-width="1"/>
+    <line x1="30" y1="${y1}" x2="16" y2="${y1}" stroke="#c8d0d8" stroke-width="0.75"/>
+    <line x1="30" y1="${y2}" x2="16" y2="${y2}" stroke="#c8d0d8" stroke-width="0.75"/>
+    <text x="9" y="${(y1+y2)/2}" text-anchor="middle" font-size="9" fill="#2b323b" transform="rotate(-90 9 ${(y1+y2)/2})">${label}</text>`;
+}
+function dimBottom(x1,x2,label){
+  return `<line x1="${x1}" y1="112" x2="${x2}" y2="112" stroke="#c8952a" stroke-width="1"/>
+    <line x1="${x1}" y1="108" x2="${x1}" y2="116" stroke="#c8952a" stroke-width="1"/>
+    <line x1="${x2}" y1="108" x2="${x2}" y2="116" stroke="#c8952a" stroke-width="1"/>
+    <line x1="${x1}" y1="100" x2="${x1}" y2="112" stroke="#f0dfb8" stroke-width="0.75"/>
+    <line x1="${x2}" y1="100" x2="${x2}" y2="112" stroke="#f0dfb8" stroke-width="0.75"/>
+    <text x="${(x1+x2)/2}" y="126" text-anchor="middle" font-size="8" fill="#c8952a">${label}</text>`;
+}
+function dimRight(y1,y2,label){
+  return `<line x1="132" y1="${y1}" x2="132" y2="${y2}" stroke="#c8952a" stroke-width="1"/>
+    <line x1="128" y1="${y1}" x2="136" y2="${y1}" stroke="#c8952a" stroke-width="1"/>
+    <line x1="128" y1="${y2}" x2="136" y2="${y2}" stroke="#c8952a" stroke-width="1"/>
+    <line x1="120" y1="${y1}" x2="132" y2="${y1}" stroke="#f0dfb8" stroke-width="0.75"/>
+    <line x1="120" y1="${y2}" x2="132" y2="${y2}" stroke="#f0dfb8" stroke-width="0.75"/>
+    <text x="146" y="${(y1+y2)/2}" text-anchor="middle" font-size="8" fill="#c8952a" transform="rotate(-90 146 ${(y1+y2)/2})">${label}</text>`;
+}
+// Schematic line-drawing, with real W/H (and a verified O/S/T sub-dimension
+// where the split geometry is known from calc-engine.js) imprinted directly
+// on it, shop-drawing style. `dims` is optional — omit it (e.g. the item
+// entry modal, before values exist) to get the plain shape with no labels.
+function diagramSVG(category, dims){
+  dims = dims || {};
+  const {W,H,O,S,T,unit} = dims;
+  const RX=30, RY=30, RW=90, RH=70, RX2=RX+RW, RY2=RY+RH;
+  let shape = `<rect x="${RX}" y="${RY}" width="${RW}" height="${RH}" fill="none" stroke="#1f5fa8" stroke-width="2.5"/>`;
+  if(category==='custom_shape'){
+    shape = `<path d="M${RX},${RY2} L${RX},${RY+18} A${RW/2},18 0 0 1 ${RX2},${RY+18} L${RX2},${RY2} Z" fill="none" stroke="#1f5fa8" stroke-width="2.5"/>`;
+    return `<svg width="160" height="130" viewBox="0 0 160 130">${shape}</svg>`;
   }
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${inner}</svg>`;
+  const hasWH = W>0 && H>0;
+  let subDim = '';
+  if((category==='hmst82_xox' || category==='p4000_xox') && hasWH){
+    const side = category==='hmst82_xox' ? O : S;
+    if(side>0){
+      const leftX = RX + (side/W)*RW, rightX = RX2 - (side/W)*RW;
+      shape += `<line x1="${leftX}" y1="${RY}" x2="${leftX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
+        <line x1="${rightX}" y1="${RY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
+      subDim = dimBottom(RX, leftX, fmtDimVal(side,unit));
+    }
+  } else if((category==='hmst82_lower_hung' || category==='hmst82_upper_hung') && hasWH && O>0){
+    const opTop = category==='hmst82_upper_hung';
+    const splitY = opTop ? RY+(O/H)*RH : RY2-(O/H)*RH;
+    shape += `<line x1="${RX}" y1="${splitY}" x2="${RX2}" y2="${splitY}" stroke="#96a1ad" stroke-width="1.2"/>`;
+    subDim = opTop ? dimRight(RY, splitY, fmtDimVal(O,unit)) : dimRight(splitY, RY2, fmtDimVal(O,unit));
+  } else if(category==='p4000_stacked_ox' && hasWH && T>0){
+    const splitY = RY + (T/H)*RH;
+    shape += `<line x1="${RX}" y1="${splitY}" x2="${RX2}" y2="${splitY}" stroke="#96a1ad" stroke-width="1.2"/>`;
+    subDim = dimRight(RY, splitY, fmtDimVal(T,unit));
+  } else if(category==='p4000_fixed_over_xox' && hasWH && T>0){
+    const splitY = RY + (T/H)*RH;
+    shape += `<line x1="${RX}" y1="${splitY}" x2="${RX2}" y2="${splitY}" stroke="#96a1ad" stroke-width="1.2"/>`;
+    subDim = dimRight(RY, splitY, fmtDimVal(T,unit));
+    if(S>0){
+      const leftX = RX + (S/W)*RW, rightX = RX2 - (S/W)*RW;
+      shape += `<line x1="${leftX}" y1="${splitY}" x2="${leftX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
+        <line x1="${rightX}" y1="${splitY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
+      subDim += dimBottom(RX, leftX, fmtDimVal(S,unit));
+    }
+  } else if(category==='hmst82_xo_ox'){
+    shape += `<line x1="${(RX+RX2)/2}" y1="${RY}" x2="${(RX+RX2)/2}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
+  } else if(SLIDING_CATEGORIES.includes(category)){
+    shape += `<line x1="${(RX+RX2)/2}" y1="${RY}" x2="${(RX+RX2)/2}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
+  }
+  const outerDim = hasWH ? (dimTop(RX,RX2,fmtDimVal(W,unit)) + dimLeft(RY,RY2,fmtDimVal(H,unit))) : '';
+  return `<svg width="160" height="130" viewBox="0 0 160 130">${shape}${outerDim}${subDim}</svg>`;
 }
 // Real reference photo where one exists (see PRODUCT_PHOTOS); falls back to
-// the schematic line-drawing for configurations with no accurate photo yet.
-function productVisualHtml(category){
+// the schematic line-drawing (with real dimensions imprinted, if given) for
+// configurations with no accurate photo yet. Dimension lines only ever go on
+// the schematic — there's no way to know where a window's edges fall inside
+// an arbitrary real photo, so photos never get an overlay.
+function productVisualHtml(category, dims){
   const photo = PRODUCT_PHOTOS[category];
-  if(!photo) return diagramSVG(category);
+  if(!photo) return diagramSVG(category, dims);
   return `<img src="${photo}" alt="" style="max-width:100%;max-height:80px;object-fit:contain;" onerror="this.style.display='none'">`;
 }
+function itemDims(it){ return it && {W:it.width, H:it.height, O:it.dimO, S:it.dimS, T:it.dimT, unit:it.unit}; }
 
 function renderItemCard(o, it){
   const cfg = CATEGORY_CONFIG[it.category] || {};
@@ -605,7 +682,7 @@ function renderItemCard(o, it){
         </div>
       </div>
       <div class="grid cols-3">
-        <div class="diagram">${productVisualHtml(it.category)}</div>
+        <div class="diagram">${productVisualHtml(it.category, itemDims(it))}</div>
         <div class="small">
           <div><b>${t('item.room')}:</b> ${esc(it.room)||t('common.na')}</div>
           ${priceHtml}
@@ -647,7 +724,7 @@ function renderItemCard(o, it){
       </div>
     </div>
     <div class="grid cols-3">
-      <div class="diagram">${productVisualHtml(it.category)}</div>
+      <div class="diagram">${productVisualHtml(it.category, itemDims(it))}</div>
       <div class="small">
         <div><b>${t('item.opening')}:</b> ${esc(opt(OPENING_STYLES,it.openingStyle))}</div>
         <div><b>${t('item.glass')}:</b> ${esc(optById(GLASS_TYPES,it.glassType))} (${esc(it.glassThickness)})</div>
@@ -745,7 +822,7 @@ function refreshItemFormFields(it){
   const cfg = CATEGORY_CONFIG[cat] || {};
   if(cfg.kind !== 'door'){
     refreshAutoO();
-    document.getElementById('diagramPreview').innerHTML = productVisualHtml(cat);
+    document.getElementById('diagramPreview').innerHTML = productVisualHtml(cat, itemDims(it));
   }
 }
 function refreshAutoO(){
@@ -852,14 +929,13 @@ function prodDescHtml(category, text){
   if(!photo) return esc(text);
   return `<div style="display:flex;align-items:center;gap:14px;"><img src="${photo}" class="prodThumb" alt="" onerror="this.style.display='none'">${esc(text)}</div>`;
 }
+// Neither of these show any per-item or installation price anymore — the
+// customer should only ever see Subtotal/Discount/Tax/Grand Total, never a
+// per-window or per-line breakdown (pricing still computes normally under
+// the hood for that aggregate math, it's just never displayed per line).
 function quoteLineRowsHtml(s){
-  if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`)}</td><td colspan="2" class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
-  // Older quotes sent before installation had its own breakdown won't have
-  // productUnitCents/installLineTotalCents in their frozen snapshot — fall
-  // back to the combined total so they still render (just without the split).
-  const productUnitCents = s.productUnitCents ?? s.unitCents;
-  const productLineTotalCents = s.productLineTotalCents ?? s.lineTotalCents;
-  let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`)}</td><td class="num">$${C.fmtCents(productUnitCents)}</td><td class="num">$${C.fmtCents(productLineTotalCents)}</td></tr>`;
+  if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`)}</td></tr><tr><td class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
+  let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`)}</td></tr>`;
   // A plain-language spec recap (opening/glass/colour/hardware) so the
   // client can double-check the order matches what they discussed —
   // doors skip this since they carry no such spec fields.
@@ -871,15 +947,10 @@ function quoteLineRowsHtml(s){
       `${t('item.color')}: ${opt(COLORS,s.color)}`,
       `${t('item.hardware')}: ${opt(HARDWARE,s.hardware)}`,
     ];
-    html += `<tr><td colspan="3" class="small" style="color:var(--gray-600);">${esc(specBits.join(' · '))}</td></tr>`;
-  }
-  // Screens are included at no charge — an explicit $0.00 line so clients
-  // see it was accounted for, not silently left off the quote.
-  if(cfg.kind !== 'door' && s.screenType && s.screenType!=='None'){
-    html += `<tr><td class="small">${tf('quote.screenIncludedLine',{screen:opt(SCREEN_TYPES,s.screenType)})} — ${esc(s.itemNo)}</td><td class="num">$0.00</td><td class="num">$0.00</td></tr>`;
-  }
-  if(s.installLineTotalCents){
-    html += `<tr><td class="small">${t('quote.installFeeLine')} — ${esc(s.itemNo)} (${s.quantity} × $${C.fmtCents(s.installUnitCents)})</td><td class="num">$${C.fmtCents(s.installUnitCents)}</td><td class="num">$${C.fmtCents(s.installLineTotalCents)}</td></tr>`;
+    html += `<tr><td class="small" style="color:var(--gray-600);">${esc(specBits.join(' · '))}</td></tr>`;
+    const screenLabel = (s.screenType && s.screenType!=='None') ? opt(SCREEN_TYPES,s.screenType) : t('quote.screenStandard');
+    html += `<tr><td class="small">${tf('quote.screenIncludedLine',{screen:screenLabel})}</td></tr>`;
+    html += `<tr><td class="small">${t('item.install')}: ${s.installRequested?t('common.yes'):t('common.no')}</td></tr>`;
   }
   return html;
 }
@@ -889,7 +960,47 @@ function liveResultToSummary(r){
     productUnitCents:r.q.productUnitCents, productLineTotalCents:r.q.productLineTotalCents,
     installUnitCents:r.q.installUnitCents, installLineTotalCents:r.q.installLineTotalCents,
     openingStyle:r.item.openingStyle, glassType:r.item.glassType, glassThickness:r.item.glassThickness,
-    color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType };
+    color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType, room:r.item.room,
+    installRequested:r.item.installRequested, dimO:r.item.dimO, dimS:r.item.dimS, dimT:r.item.dimT };
+}
+// Client Quote-only card layout (one bordered card per window, photo left,
+// specs on the right) — matches the Windows & Products item cards visually
+// so clients can tell at a glance which section covers which window. No
+// price appears anywhere here; see the comment above quoteLineRowsHtml.
+function quoteLineCardHtml(s){
+  const cfg = CATEGORY_CONFIG[s.category] || {};
+  const head = `<div class="itemHead"><h4>${esc(s.itemNo)} — ${esc(productLabel(s.category))} <span class="small">(${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})</span></h4></div>`;
+  if(!s.ok){
+    return `<div class="itemCard">${head}
+      <div class="grid cols-3">
+        <div class="diagram">${productVisualHtml(s.category, itemDims(s))}</div>
+        <div class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</div>
+      </div>
+    </div>`;
+  }
+  if(cfg.kind === 'door'){
+    return `<div class="itemCard">${head}
+      <div class="grid cols-3">
+        <div class="diagram">${productVisualHtml(s.category, itemDims(s))}</div>
+        <div class="small"><div><b>${t('item.room')}:</b> ${esc(s.room)||t('common.na')}</div></div>
+      </div>
+    </div>`;
+  }
+  const screenLabel = (s.screenType && s.screenType!=='None') ? opt(SCREEN_TYPES,s.screenType) : t('quote.screenStandard');
+  return `<div class="itemCard">${head}
+    <div class="grid cols-3">
+      <div class="diagram">${productVisualHtml(s.category, itemDims(s))}</div>
+      <div class="small">
+        <div><b>${t('item.opening')}:</b> ${esc(opt(OPENING_STYLES,s.openingStyle))}</div>
+        <div><b>${t('item.glass')}:</b> ${esc(optById(GLASS_TYPES,s.glassType))}${s.glassThickness?` (${esc(s.glassThickness)})`:''}</div>
+        <div><b>${t('item.color')}:</b> ${esc(opt(COLORS,s.color))}</div>
+        <div><b>${t('item.screen')}:</b> ${esc(screenLabel)} — ${t('quote.includedFree')}</div>
+        <div><b>${t('item.hardware')}:</b> ${esc(opt(HARDWARE,s.hardware))}</div>
+        <div><b>${t('item.room')}:</b> ${esc(s.room)||t('common.na')}</div>
+        <div><b>${t('item.install')}:</b> ${s.installRequested?t('common.yes'):t('common.no')}</div>
+      </div>
+    </div>
+  </div>`;
 }
 function renderQuoteSummary(o){
   const manualItems = o.quote.manualItems || [];
@@ -908,9 +1019,8 @@ function renderQuoteSummary(o){
   const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
   const locked = q.status==='approved';
 
-  const rows = live.results.map(r => quoteLineRowsHtml(liveResultToSummary(r))).join('');
-  const manualRows = manualItems.map(mi => `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td>
-    <td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}
+  const cards = live.results.map(r => quoteLineCardHtml(liveResultToSummary(r))).join('');
+  const manualRows = manualItems.map(mi => `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}
     ${canEdit()&&!locked?` <button class="btn ghost" style="padding:2px 6px;" onclick="removeManualItem('${o.id}','${mi.id}')">✕</button>`:''}</td></tr>`).join('');
   const isStaleApproved = locked && o.items.some(it=>C.isQuoteStaleForItem(q,it,state.pricing));
 
@@ -940,14 +1050,13 @@ function renderQuoteSummary(o){
       <div>${statusHtml}</div>
     </div>
     ${live.excludedCount>0 ? `<div class="banner warn" style="margin-top:10px;">${live.excludedCount} ${t('quote.excludedItems')}</div>` : ''}
-    ${o.items.length>0 ? `<table style="margin-top:10px;"><thead><tr><th>${t('order.windowsProducts')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead>
-    <tbody>${rows}</tbody></table>` : ''}
+    ${o.items.length>0 ? `<div style="margin-top:10px;">${cards}</div>` : ''}
     <div class="flexRow" style="justify-content:space-between;margin-top:14px;">
       <h4 style="margin:0;font-size:13px;color:var(--navy);">${t('quote.manualItemsTitle')}</h4>
       ${canEdit()&&!locked?`<button class="btn ghost" onclick="openManualItemModal('${o.id}')">${t('quote.addManualItem')}</button>`:''}
     </div>
     ${manualItems.length>0
-      ? `<table style="margin-top:6px;"><thead><tr><th>${t('quote.manualItemDesc')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead><tbody>${manualRows}</tbody></table>`
+      ? `<table style="margin-top:6px;"><thead><tr><th>${t('quote.manualItemDesc')}</th></tr></thead><tbody>${manualRows}</tbody></table>`
       : `<div class="small" style="margin-top:4px;">${t('quote.noManualItems')}</div>`}
     <div class="grid cols-3" style="margin-top:12px;">
       <div class="small"><b>${t('quote.subtotal')}:</b> $${C.fmtCents(subtotalCents)}</div>
@@ -1035,7 +1144,8 @@ async function sendQuoteToClient(orderId){
         productUnitCents:r.q.ok?r.q.productUnitCents:null, productLineTotalCents:r.q.ok?r.q.productLineTotalCents:null,
         installUnitCents:r.q.ok?r.q.installUnitCents:null, installLineTotalCents:r.q.ok?r.q.installLineTotalCents:null,
         openingStyle:r.item.openingStyle, glassType:r.item.glassType, glassThickness:r.item.glassThickness,
-        color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType})),
+        color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType, room:r.item.room,
+        installRequested:r.item.installRequested, dimO:r.item.dimO, dimS:r.item.dimS, dimT:r.item.dimT})),
       manualItems,
     };
     const nextStatus = ['New Inquiry','Measurement Required','Measurements Completed','Quote In Progress'].includes(o.status) ? 'Customer Approval Required' : null;
@@ -1207,7 +1317,7 @@ async function generateInvoice(orderId){
     excludedCount = snap.items.filter(s=>!s.ok).length;
     lineRows = snap.items.map(s => quoteLineRowsHtml(s));
     (snap.manualItems||[]).forEach(mi => lineRows.push(
-      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td><td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}</td></tr>`));
+      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td></tr>`));
   } else {
     const live = C.computeOrderQuoteLive(o.items, state.pricing);
     const manualItems = o.quote.manualItems || [];
@@ -1220,7 +1330,7 @@ async function generateInvoice(orderId){
     excludedCount = live.excludedCount;
     lineRows = live.results.map(r => quoteLineRowsHtml(liveResultToSummary(r)));
     manualItems.forEach(mi => lineRows.push(
-      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td><td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}</td></tr>`));
+      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td></tr>`));
   }
   const depositCents = Math.round((Number(o.deposit)||0)*100);
   const balanceDueCents = totalCents - depositCents;
@@ -1247,7 +1357,7 @@ async function generateInvoice(orderId){
         <div><b>${label('Status','状态')}:</b> ${esc(statusLabel(o.status))}</div>
       </div>
       ${excludedCount>0 ? `<div class="banner warn">${excludedCount} ${label('item(s) need a manual quote and are not included in this invoice.','个项目需要手动报价，未包含在此发票中。')}</div>` : ''}
-      <table><thead><tr><th>${label('Description','说明')}</th><th>${label('Unit Price','单价')}</th><th>${label('Line Total','小计')}</th></tr></thead>
+      <table><thead><tr><th>${label('Description','说明')}</th></tr></thead>
       <tbody>${lineRows.join('')}</tbody></table>
       <table style="margin-top:8px;">
         <tbody>
