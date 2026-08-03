@@ -95,6 +95,12 @@ function buildNav(){
   document.getElementById('userNameLabel').textContent = state.user.full_name;
 }
 async function route(r, param){
+  // Re-rendering the same page (e.g. after saving/deleting an item, the
+  // order-detail page calls route() again on itself) should keep the
+  // reader's scroll position — only an actual navigation to a different
+  // page/record should jump to the top.
+  const samePage = r===currentRoute && param===currentParam;
+  const scrollY = window.scrollY;
   currentRoute = r; currentParam = param;
   document.querySelectorAll('#navLinks a').forEach(a=> a.classList.toggle('active', a.dataset.route===r));
   const content = document.getElementById('content');
@@ -110,6 +116,7 @@ async function route(r, param){
     else if(r==='formulas') html = await renderFormulas();
     else html = '';
     content.innerHTML = html;
+    if(samePage) window.scrollTo(0, scrollY);
   }catch(err){
     content.innerHTML = `<div class="banner error">${esc(err.message)}</div>`;
   }
