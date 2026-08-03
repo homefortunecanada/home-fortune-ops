@@ -679,6 +679,7 @@ function renderItemCard(o, it){
         <div class="flexRow noPrint">
           ${canEdit()?`<button class="btn ghost" onclick="openItemModal('${o.id}','${it.itemNo}')">${t('item.edit')}</button>`:''}
           ${canEdit()?`<button class="btn ghost" onclick="duplicateItem('${o.id}','${it.itemNo}')">${t('item.duplicate')}</button>`:''}
+          ${canEdit()?`<button class="btn ghost" style="color:var(--red);" onclick="deleteItem('${o.id}','${it.itemNo}')">${t('item.delete')}</button>`:''}
         </div>
       </div>
       <div class="grid cols-3">
@@ -721,6 +722,7 @@ function renderItemCard(o, it){
         ${statusBadge}
         ${canEdit() && !locked ?`<button class="btn ghost" onclick="openItemModal('${o.id}','${it.itemNo}')">${t('item.edit')}</button>`:''}
         ${canEdit()?`<button class="btn ghost" onclick="duplicateItem('${o.id}','${it.itemNo}')">${t('item.duplicate')}</button>`:''}
+        ${canEdit() && !locked ?`<button class="btn ghost" style="color:var(--red);" onclick="deleteItem('${o.id}','${it.itemNo}')">${t('item.delete')}</button>`:''}
       </div>
     </div>
     <div class="grid cols-3">
@@ -885,6 +887,14 @@ async function duplicateItem(orderId, itemNo){
   try{
     const src = findItem(itemNo);
     await D.duplicateItem(orderId, src, currentOrder.items.length);
+    route('order-detail', orderId);
+  }catch(err){ alert(err.message); }
+}
+async function deleteItem(orderId, itemNo){
+  const it = findItem(itemNo);
+  if(!confirm(tf('confirm.deleteItem',{item:itemNo}))) return;
+  try{
+    await D.deleteItem(orderId, it);
     route('order-detail', orderId);
   }catch(err){ alert(err.message); }
 }
@@ -1719,7 +1729,7 @@ Object.assign(window, {
   openClientModal, saveClient, checkDup, filterClientTable, toggleArchivedClients, archiveClient, restoreClient,
   openOrderModal, saveOrder, applyOrderFilters, calPrevMonth, calNextMonth, calGoToday,
   toggleArchivedOrders, archiveOrder, restoreOrder,
-  openItemModal, saveItem, refreshItemFormFields, refreshAutoO, duplicateItem, runCalculation, approveCalc, reopenCalc,
+  openItemModal, saveItem, refreshItemFormFields, refreshAutoO, duplicateItem, deleteItem, runCalculation, approveCalc, reopenCalc,
   switchOrderTab,
   updateQuoteRates, updateManualTotal, openManualItemModal, saveManualItem, removeManualItem,
   sendQuoteToClient, openApprovalModal, recordApproval, reopenQuote,

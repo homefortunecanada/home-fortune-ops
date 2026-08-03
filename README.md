@@ -143,6 +143,12 @@ documented at the top of the file):
    the window's own price on the quote/invoice (not a separate line, unlike
    installation). Editable under Formula Admin → Quote Pricing → Window
    Configuration Minimum Charges.
+9. `009_delete_order_items.sql` — adds the missing DELETE policy for
+   `order_items` (there wasn't one at all before, so deleting a window/door
+   line was blocked at the database level regardless of the UI). **Required**
+   for the "Delete" button on a Windows & Products item card to work — an
+   item can only be deleted while its calculation isn't yet approved, same
+   lock as editing.
 
 ## Known gaps / next steps
 

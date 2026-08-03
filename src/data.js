@@ -436,6 +436,10 @@ export async function duplicateItem(orderId, srcItem, existingCount){
   }
   throw new Error('Could not allocate a unique item number — please retry.');
 }
+export async function deleteItem(orderId, item){
+  await call(supabase.from('order_items').delete().eq('id', item.id));
+  await pushHistory(orderId, 'deletedItem', {item:item.itemNo});
+}
 export async function runCalculation(orderId, item, calcResult){
   const patch = calcResult.ok
     ? { calc_status:'calculated', calc_results:{components:calcResult.components, glass:calcResult.glass,
