@@ -573,57 +573,75 @@ function switchOrderTab(btn, tab){
   document.getElementById('tab-history').classList.toggle('hidden', tab!=='history');
 }
 
-const SLIDING_CATEGORIES = ['hmst82_xo_ox','hmst82_xox','p4000_x','p4000_xx','p4000_ox','p4000_xox','p4000_fixed_over_xox','p4000_stacked_ox'];
+// Two-panel, exact 50/50 split verified against calc-engine.js (hmst82_xo_ox:
+// O=W/2; p4000_xx: two sashes each W/2; p4000_ox: sash + fixed each W/2).
+// p4000_x is deliberately excluded — it's a single casement, one pane, no
+// split at all.
+const HALF_SPLIT_CATEGORIES = ['hmst82_xo_ox','p4000_xx','p4000_ox'];
 function fmtDimVal(n, unit){ return `${n}${unit==='in'?'"':(unit||'mm')}`; }
 // Dimension-line fragments (extension lines + tick marks + text), styled
 // like a factory shop-drawing. Blue/gray for the overall W/H, amber for a
-// sub-dimension (O/S/T) so it reads as a secondary measurement.
-function dimTop(x1,x2,label){
+// sub-dimension (O/S/T) so it reads as a secondary measurement. edge* is
+// the actual rect edge the extension lines reach back to — the rect isn't
+// always the same size (it's scaled to the item's real aspect ratio), only
+// the dimension-line lane positions (18/16/112/132) are fixed.
+function dimTop(x1,x2,edgeY,label){
   return `<line x1="${x1}" y1="18" x2="${x2}" y2="18" stroke="#5b6673" stroke-width="1"/>
     <line x1="${x1}" y1="14" x2="${x1}" y2="22" stroke="#5b6673" stroke-width="1"/>
     <line x1="${x2}" y1="14" x2="${x2}" y2="22" stroke="#5b6673" stroke-width="1"/>
-    <line x1="${x1}" y1="30" x2="${x1}" y2="18" stroke="#c8d0d8" stroke-width="0.75"/>
-    <line x1="${x2}" y1="30" x2="${x2}" y2="18" stroke="#c8d0d8" stroke-width="0.75"/>
+    <line x1="${x1}" y1="${edgeY}" x2="${x1}" y2="18" stroke="#c8d0d8" stroke-width="0.75"/>
+    <line x1="${x2}" y1="${edgeY}" x2="${x2}" y2="18" stroke="#c8d0d8" stroke-width="0.75"/>
     <text x="${(x1+x2)/2}" y="12" text-anchor="middle" font-size="9" fill="#2b323b">${label}</text>`;
 }
-function dimLeft(y1,y2,label){
+function dimLeft(y1,y2,edgeX,label){
   return `<line x1="16" y1="${y1}" x2="16" y2="${y2}" stroke="#5b6673" stroke-width="1"/>
     <line x1="12" y1="${y1}" x2="20" y2="${y1}" stroke="#5b6673" stroke-width="1"/>
     <line x1="12" y1="${y2}" x2="20" y2="${y2}" stroke="#5b6673" stroke-width="1"/>
-    <line x1="30" y1="${y1}" x2="16" y2="${y1}" stroke="#c8d0d8" stroke-width="0.75"/>
-    <line x1="30" y1="${y2}" x2="16" y2="${y2}" stroke="#c8d0d8" stroke-width="0.75"/>
+    <line x1="${edgeX}" y1="${y1}" x2="16" y2="${y1}" stroke="#c8d0d8" stroke-width="0.75"/>
+    <line x1="${edgeX}" y1="${y2}" x2="16" y2="${y2}" stroke="#c8d0d8" stroke-width="0.75"/>
     <text x="9" y="${(y1+y2)/2}" text-anchor="middle" font-size="9" fill="#2b323b" transform="rotate(-90 9 ${(y1+y2)/2})">${label}</text>`;
 }
-function dimBottom(x1,x2,label){
+function dimBottom(x1,x2,edgeY,label){
   return `<line x1="${x1}" y1="112" x2="${x2}" y2="112" stroke="#c8952a" stroke-width="1"/>
     <line x1="${x1}" y1="108" x2="${x1}" y2="116" stroke="#c8952a" stroke-width="1"/>
     <line x1="${x2}" y1="108" x2="${x2}" y2="116" stroke="#c8952a" stroke-width="1"/>
-    <line x1="${x1}" y1="100" x2="${x1}" y2="112" stroke="#f0dfb8" stroke-width="0.75"/>
-    <line x1="${x2}" y1="100" x2="${x2}" y2="112" stroke="#f0dfb8" stroke-width="0.75"/>
+    <line x1="${x1}" y1="${edgeY}" x2="${x1}" y2="112" stroke="#f0dfb8" stroke-width="0.75"/>
+    <line x1="${x2}" y1="${edgeY}" x2="${x2}" y2="112" stroke="#f0dfb8" stroke-width="0.75"/>
     <text x="${(x1+x2)/2}" y="126" text-anchor="middle" font-size="8" fill="#c8952a">${label}</text>`;
 }
-function dimRight(y1,y2,label){
+function dimRight(y1,y2,edgeX,label){
   return `<line x1="132" y1="${y1}" x2="132" y2="${y2}" stroke="#c8952a" stroke-width="1"/>
     <line x1="128" y1="${y1}" x2="136" y2="${y1}" stroke="#c8952a" stroke-width="1"/>
     <line x1="128" y1="${y2}" x2="136" y2="${y2}" stroke="#c8952a" stroke-width="1"/>
-    <line x1="120" y1="${y1}" x2="132" y2="${y1}" stroke="#f0dfb8" stroke-width="0.75"/>
-    <line x1="120" y1="${y2}" x2="132" y2="${y2}" stroke="#f0dfb8" stroke-width="0.75"/>
+    <line x1="${edgeX}" y1="${y1}" x2="132" y2="${y1}" stroke="#f0dfb8" stroke-width="0.75"/>
+    <line x1="${edgeX}" y1="${y2}" x2="132" y2="${y2}" stroke="#f0dfb8" stroke-width="0.75"/>
     <text x="146" y="${(y1+y2)/2}" text-anchor="middle" font-size="8" fill="#c8952a" transform="rotate(-90 146 ${(y1+y2)/2})">${label}</text>`;
 }
 // Schematic line-drawing, with real W/H (and a verified O/S/T sub-dimension
 // where the split geometry is known from calc-engine.js) imprinted directly
 // on it, shop-drawing style. `dims` is optional — omit it (e.g. the item
-// entry modal, before values exist) to get the plain shape with no labels.
+// entry modal, before values exist) to get a generic 90x70 shape with no
+// labels; when given, the box itself is scaled to the item's real W:H
+// aspect ratio (clamped so extreme ratios don't collapse to a sliver),
+// not just labeled with the numbers.
 function diagramSVG(category, dims){
   dims = dims || {};
   const {W,H,O,S,T,unit} = dims;
-  const RX=30, RY=30, RW=90, RH=70, RX2=RX+RW, RY2=RY+RH;
+  const hasWH = W>0 && H>0;
+  const MAXW=90, MAXH=70, MIN=22;
+  let RW=MAXW, RH=MAXH;
+  if(hasWH){
+    const ratio = W/H;
+    if(ratio >= MAXW/MAXH){ RW=MAXW; RH=Math.max(MIN, MAXW/ratio); }
+    else { RH=MAXH; RW=Math.max(MIN, MAXH*ratio); }
+  }
+  const RX = 30 + (MAXW-RW)/2, RY = 30 + (MAXH-RH)/2, RX2=RX+RW, RY2=RY+RH;
   let shape = `<rect x="${RX}" y="${RY}" width="${RW}" height="${RH}" fill="none" stroke="#1f5fa8" stroke-width="2.5"/>`;
   if(category==='custom_shape'){
-    shape = `<path d="M${RX},${RY2} L${RX},${RY+18} A${RW/2},18 0 0 1 ${RX2},${RY+18} L${RX2},${RY2} Z" fill="none" stroke="#1f5fa8" stroke-width="2.5"/>`;
+    const archH = Math.min(18, RH*0.35);
+    shape = `<path d="M${RX},${RY2} L${RX},${RY+archH} A${RW/2},${archH} 0 0 1 ${RX2},${RY+archH} L${RX2},${RY2} Z" fill="none" stroke="#1f5fa8" stroke-width="2.5"/>`;
     return `<svg width="160" height="130" viewBox="0 0 160 130">${shape}</svg>`;
   }
-  const hasWH = W>0 && H>0;
   let subDim = '';
   if((category==='hmst82_xox' || category==='p4000_xox') && hasWH){
     const side = category==='hmst82_xox' ? O : S;
@@ -631,33 +649,31 @@ function diagramSVG(category, dims){
       const leftX = RX + (side/W)*RW, rightX = RX2 - (side/W)*RW;
       shape += `<line x1="${leftX}" y1="${RY}" x2="${leftX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
         <line x1="${rightX}" y1="${RY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
-      subDim = dimBottom(RX, leftX, fmtDimVal(side,unit));
+      subDim = dimBottom(RX, leftX, RY2, fmtDimVal(side,unit));
     }
   } else if((category==='hmst82_lower_hung' || category==='hmst82_upper_hung') && hasWH && O>0){
     const opTop = category==='hmst82_upper_hung';
     const splitY = opTop ? RY+(O/H)*RH : RY2-(O/H)*RH;
     shape += `<line x1="${RX}" y1="${splitY}" x2="${RX2}" y2="${splitY}" stroke="#96a1ad" stroke-width="1.2"/>`;
-    subDim = opTop ? dimRight(RY, splitY, fmtDimVal(O,unit)) : dimRight(splitY, RY2, fmtDimVal(O,unit));
+    subDim = opTop ? dimRight(RY, splitY, RX2, fmtDimVal(O,unit)) : dimRight(splitY, RY2, RX2, fmtDimVal(O,unit));
   } else if(category==='p4000_stacked_ox' && hasWH && T>0){
     const splitY = RY + (T/H)*RH;
     shape += `<line x1="${RX}" y1="${splitY}" x2="${RX2}" y2="${splitY}" stroke="#96a1ad" stroke-width="1.2"/>`;
-    subDim = dimRight(RY, splitY, fmtDimVal(T,unit));
+    subDim = dimRight(RY, splitY, RX2, fmtDimVal(T,unit));
   } else if(category==='p4000_fixed_over_xox' && hasWH && T>0){
     const splitY = RY + (T/H)*RH;
     shape += `<line x1="${RX}" y1="${splitY}" x2="${RX2}" y2="${splitY}" stroke="#96a1ad" stroke-width="1.2"/>`;
-    subDim = dimRight(RY, splitY, fmtDimVal(T,unit));
+    subDim = dimRight(RY, splitY, RX2, fmtDimVal(T,unit));
     if(S>0){
       const leftX = RX + (S/W)*RW, rightX = RX2 - (S/W)*RW;
       shape += `<line x1="${leftX}" y1="${splitY}" x2="${leftX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
         <line x1="${rightX}" y1="${splitY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
-      subDim += dimBottom(RX, leftX, fmtDimVal(S,unit));
+      subDim += dimBottom(RX, leftX, RY2, fmtDimVal(S,unit));
     }
-  } else if(category==='hmst82_xo_ox'){
-    shape += `<line x1="${(RX+RX2)/2}" y1="${RY}" x2="${(RX+RX2)/2}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
-  } else if(SLIDING_CATEGORIES.includes(category)){
+  } else if(HALF_SPLIT_CATEGORIES.includes(category)){
     shape += `<line x1="${(RX+RX2)/2}" y1="${RY}" x2="${(RX+RX2)/2}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
   }
-  const outerDim = hasWH ? (dimTop(RX,RX2,fmtDimVal(W,unit)) + dimLeft(RY,RY2,fmtDimVal(H,unit))) : '';
+  const outerDim = hasWH ? (dimTop(RX,RX2,RY,fmtDimVal(W,unit)) + dimLeft(RY,RY2,RX,fmtDimVal(H,unit))) : '';
   return `<svg width="160" height="130" viewBox="0 0 160 130">${shape}${outerDim}${subDim}</svg>`;
 }
 // Always the schematic line-drawing with real dimensions imprinted, if
@@ -926,42 +942,6 @@ async function reopenCalc(orderId, itemNo){
 }
 
 /* ================= CLIENT QUOTE ================= */
-// Renders 1-2 <tr> rows for a quote/invoice line item: the window/door
-// itself (its price already includes any XOX extra-glass surcharge, folded
-// in silently), plus a SEPARATE row for installation if it was requested
-// (e.g. "6 windows: $X" + "Installation (6 x $150): $900" as distinct rows).
-// `s` is a normalized summary: {itemNo,category,width,height,unit,quantity,
-// ok,error,productUnitCents,productLineTotalCents,installUnitCents,installLineTotalCents}
-// A small dimensioned schematic next to the item description, so the
-// client can confirm size/shape at a glance without a real photo.
-function prodDescHtml(category, text, dims){
-  return `<div style="display:flex;align-items:center;gap:14px;"><div class="prodThumb">${diagramSVG(category, dims)}</div>${esc(text)}</div>`;
-}
-// Neither of these show any per-item or installation price anymore — the
-// customer should only ever see Subtotal/Discount/Tax/Grand Total, never a
-// per-window or per-line breakdown (pricing still computes normally under
-// the hood for that aggregate math, it's just never displayed per line).
-function quoteLineRowsHtml(s){
-  if(!s.ok) return `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)}`, itemDims(s))}</td></tr><tr><td class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
-  let html = `<tr><td>${prodDescHtml(s.category, `${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`, itemDims(s))}</td></tr>`;
-  // A plain-language spec recap (opening/glass/colour/hardware) so the
-  // client can double-check the order matches what they discussed —
-  // doors skip this since they carry no such spec fields.
-  const cfg = CATEGORY_CONFIG[s.category] || {};
-  if(cfg.kind !== 'door' && s.openingStyle!=null){
-    const specBits = [
-      `${t('item.opening')}: ${opt(OPENING_STYLES,s.openingStyle)}`,
-      `${t('item.glass')}: ${optById(GLASS_TYPES,s.glassType)}${s.glassThickness?` (${s.glassThickness})`:''}`,
-      `${t('item.color')}: ${opt(COLORS,s.color)}`,
-      `${t('item.hardware')}: ${opt(HARDWARE,s.hardware)}`,
-    ];
-    html += `<tr><td class="small" style="color:var(--gray-600);">${esc(specBits.join(' · '))}</td></tr>`;
-    const screenLabel = (s.screenType && s.screenType!=='None') ? opt(SCREEN_TYPES,s.screenType) : t('quote.screenStandard');
-    html += `<tr><td class="small">${tf('quote.screenIncludedLine',{screen:screenLabel})}</td></tr>`;
-    html += `<tr><td class="small">${t('item.install')}: ${s.installRequested?t('common.yes'):t('common.no')}</td></tr>`;
-  }
-  return html;
-}
 function liveResultToSummary(r){
   return { itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height, unit:r.item.unit,
     quantity:r.item.quantity, ok:r.q.ok, error:r.q.error,
@@ -971,10 +951,14 @@ function liveResultToSummary(r){
     color:r.item.color, hardware:r.item.hardware, screenType:r.item.screenType, room:r.item.room,
     installRequested:r.item.installRequested, dimO:r.item.dimO, dimS:r.item.dimS, dimT:r.item.dimT };
 }
-// Client Quote-only card layout (one bordered card per window, photo left,
-// specs on the right) — matches the Windows & Products item cards visually
-// so clients can tell at a glance which section covers which window. No
-// price appears anywhere here; see the comment above quoteLineRowsHtml.
+// Card layout (one bordered card per window, diagram left, specs on the
+// right) — matches the Windows & Products item cards visually, and is
+// shared by both the Client Quote section and the printed Invoice, so
+// clients see the same thing on screen and on paper. No per-item or
+// installation price appears anywhere here — the customer should only
+// ever see Subtotal/Discount/Tax/Grand Total (pricing still computes
+// normally under the hood for that aggregate math, it's just never
+// rendered per line).
 function quoteLineCardHtml(s){
   const cfg = CATEGORY_CONFIG[s.category] || {};
   const head = `<div class="itemHead"><h4>${esc(s.itemNo)} — ${esc(productLabel(s.category))} <span class="small">(${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})</span></h4></div>`;
@@ -1323,9 +1307,9 @@ async function generateInvoice(orderId){
     subtotalCents = snap.subtotalCents; discountPct = snap.discountPct; taxPct = snap.taxPct;
     discountCents = snap.discountCents; taxCents = snap.taxCents; totalCents = snap.totalCents;
     excludedCount = snap.items.filter(s=>!s.ok).length;
-    lineRows = snap.items.map(s => quoteLineRowsHtml(s));
+    lineRows = snap.items.map(s => quoteLineCardHtml(s));
     (snap.manualItems||[]).forEach(mi => lineRows.push(
-      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td></tr>`));
+      `<div class="itemCard small">${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</div>`));
   } else {
     const live = C.computeOrderQuoteLive(o.items, state.pricing);
     const manualItems = o.quote.manualItems || [];
@@ -1336,9 +1320,9 @@ async function generateInvoice(orderId){
     taxCents = Math.round(taxableCents*taxPct/100);
     totalCents = q.manualTotalCents!=null ? q.manualTotalCents : taxableCents+taxCents;
     excludedCount = live.excludedCount;
-    lineRows = live.results.map(r => quoteLineRowsHtml(liveResultToSummary(r)));
+    lineRows = live.results.map(r => quoteLineCardHtml(liveResultToSummary(r)));
     manualItems.forEach(mi => lineRows.push(
-      `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td></tr>`));
+      `<div class="itemCard small">${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</div>`));
   }
   const depositCents = Math.round((Number(o.deposit)||0)*100);
   const balanceDueCents = totalCents - depositCents;
@@ -1365,8 +1349,7 @@ async function generateInvoice(orderId){
         <div><b>${label('Status','状态')}:</b> ${esc(statusLabel(o.status))}</div>
       </div>
       ${excludedCount>0 ? `<div class="banner warn">${excludedCount} ${label('item(s) need a manual quote and are not included in this invoice.','个项目需要手动报价，未包含在此发票中。')}</div>` : ''}
-      <table><thead><tr><th>${label('Description','说明')}</th></tr></thead>
-      <tbody>${lineRows.join('')}</tbody></table>
+      <div style="margin-top:10px;">${lineRows.join('')}</div>
       <table style="margin-top:8px;">
         <tbody>
           <tr><td style="text-align:right;border:none;"><b>${label('Subtotal','小计总额')}</b></td><td class="num" style="width:120px;border:none;">$${C.fmtCents(subtotalCents)}</td></tr>
