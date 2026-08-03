@@ -942,6 +942,33 @@ async function reopenCalc(orderId, itemNo){
 }
 
 /* ================= CLIENT QUOTE ================= */
+// Internal-only price table row(s) for the on-screen Client Quote section —
+// staff still need to see per-item/installation pricing while building a
+// quote, even though the customer-facing Invoice never shows it. No
+// diagram here (unlike quoteLineCardHtml) — it's already shown once, right
+// above, on the Windows & Products item card for this same item.
+function quoteLineInternalRowsHtml(s){
+  if(!s.ok) return `<tr><td>${esc(`${s.itemNo} — ${productLabel(s.category)}`)}</td><td colspan="2" class="small" style="color:var(--red);">${esc(s.error||t('quote.manualQuoteRequired'))}</td></tr>`;
+  const productUnitCents = s.productUnitCents ?? s.unitCents;
+  const productLineTotalCents = s.productLineTotalCents ?? s.lineTotalCents;
+  let html = `<tr><td>${esc(`${s.itemNo} — ${productLabel(s.category)} (${s.width}×${s.height}${s.unit||'mm'} × ${s.quantity})`)}</td><td class="num">$${C.fmtCents(productUnitCents)}</td><td class="num">$${C.fmtCents(productLineTotalCents)}</td></tr>`;
+  const cfg = CATEGORY_CONFIG[s.category] || {};
+  if(cfg.kind !== 'door' && s.openingStyle!=null){
+    const specBits = [
+      `${t('item.opening')}: ${opt(OPENING_STYLES,s.openingStyle)}`,
+      `${t('item.glass')}: ${optById(GLASS_TYPES,s.glassType)}${s.glassThickness?` (${s.glassThickness})`:''}`,
+      `${t('item.color')}: ${opt(COLORS,s.color)}`,
+      `${t('item.hardware')}: ${opt(HARDWARE,s.hardware)}`,
+    ];
+    html += `<tr><td colspan="3" class="small" style="color:var(--gray-600);">${esc(specBits.join(' · '))}</td></tr>`;
+    const screenLabel = (s.screenType && s.screenType!=='None') ? opt(SCREEN_TYPES,s.screenType) : t('quote.screenStandard');
+    html += `<tr><td class="small">${tf('quote.screenIncludedLine',{screen:screenLabel})}</td><td class="num">$0.00</td><td class="num">$0.00</td></tr>`;
+  }
+  if(s.installLineTotalCents){
+    html += `<tr><td class="small">${t('quote.installFeeLine')} — ${esc(s.itemNo)} (${s.quantity} × $${C.fmtCents(s.installUnitCents)})</td><td class="num">$${C.fmtCents(s.installUnitCents)}</td><td class="num">$${C.fmtCents(s.installLineTotalCents)}</td></tr>`;
+  }
+  return html;
+}
 function liveResultToSummary(r){
   return { itemNo:r.item.itemNo, category:r.item.category, width:r.item.width, height:r.item.height, unit:r.item.unit,
     quantity:r.item.quantity, ok:r.q.ok, error:r.q.error,
@@ -1011,8 +1038,9 @@ function renderQuoteSummary(o){
   const totalCents = hasOverride ? q.manualTotalCents : calculatedTotalCents;
   const locked = q.status==='approved';
 
-  const cards = live.results.map(r => quoteLineCardHtml(liveResultToSummary(r))).join('');
-  const manualRows = manualItems.map(mi => `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}
+  const rows = live.results.map(r => quoteLineInternalRowsHtml(liveResultToSummary(r))).join('');
+  const manualRows = manualItems.map(mi => `<tr><td>${esc(mi.description)}${mi.quantity!==1?` × ${mi.quantity}`:''}</td>
+    <td class="num">$${C.fmtCents(mi.unitPriceCents)}</td><td class="num">$${C.fmtCents(mi.unitPriceCents*mi.quantity)}
     ${canEdit()&&!locked?` <button class="btn ghost" style="padding:2px 6px;" onclick="removeManualItem('${o.id}','${mi.id}')">✕</button>`:''}</td></tr>`).join('');
   const isStaleApproved = locked && o.items.some(it=>C.isQuoteStaleForItem(q,it,state.pricing));
 
@@ -1042,13 +1070,14 @@ function renderQuoteSummary(o){
       <div>${statusHtml}</div>
     </div>
     ${live.excludedCount>0 ? `<div class="banner warn" style="margin-top:10px;">${live.excludedCount} ${t('quote.excludedItems')}</div>` : ''}
-    ${o.items.length>0 ? `<div style="margin-top:10px;">${cards}</div>` : ''}
+    ${o.items.length>0 ? `<table style="margin-top:10px;"><thead><tr><th>${t('order.windowsProducts')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead>
+    <tbody>${rows}</tbody></table>` : ''}
     <div class="flexRow" style="justify-content:space-between;margin-top:14px;">
       <h4 style="margin:0;font-size:13px;color:var(--navy);">${t('quote.manualItemsTitle')}</h4>
       ${canEdit()&&!locked?`<button class="btn ghost" onclick="openManualItemModal('${o.id}')">${t('quote.addManualItem')}</button>`:''}
     </div>
     ${manualItems.length>0
-      ? `<table style="margin-top:6px;"><thead><tr><th>${t('quote.manualItemDesc')}</th></tr></thead><tbody>${manualRows}</tbody></table>`
+      ? `<table style="margin-top:6px;"><thead><tr><th>${t('quote.manualItemDesc')}</th><th>${t('quote.unitPrice')}</th><th>${t('quote.lineTotal')}</th></tr></thead><tbody>${manualRows}</tbody></table>`
       : `<div class="small" style="margin-top:4px;">${t('quote.noManualItems')}</div>`}
     <div class="grid cols-3" style="margin-top:12px;">
       <div class="small"><b>${t('quote.subtotal')}:</b> $${C.fmtCents(subtotalCents)}</div>
