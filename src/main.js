@@ -617,6 +617,23 @@ function dimRight(y1,y2,edgeX,label){
     <line x1="${edgeX}" y1="${y2}" x2="132" y2="${y2}" stroke="#f0dfb8" stroke-width="0.75"/>
     <text x="146" y="${(y1+y2)/2}" text-anchor="middle" font-size="8" fill="#c8952a" transform="rotate(-90 146 ${(y1+y2)/2})">${label}</text>`;
 }
+// A small chevron arrowhead at (cx,cy) pointing in direction `dir` (-1 left,
+// +1 right), sized off `s` — the "which way it opens" indicator on sliding
+// panels.
+function chevron(cx, cy, dir, s){
+  const tipX = cx + dir*s, wingX = cx - dir*s*0.55;
+  return `<polyline points="${wingX},${cy-s*0.75} ${tipX},${cy} ${wingX},${cy+s*0.75}" fill="none" stroke="#96a1ad" stroke-width="1.3"/>`;
+}
+// Left/right chevron pair when the panel's actual travel direction isn't
+// known from the item's Opening Style (e.g. no item selected yet, or an
+// opening style that doesn't imply a side) — signals "this slides" without
+// asserting a specific direction.
+function chevronBoth(cx, cy, s){
+  return chevron(cx-s*0.6, cy, -1, s*0.7) + chevron(cx+s*0.6, cy, 1, s*0.7);
+}
+function openingDir(openingStyle){
+  return openingStyle==='Left Hand' ? -1 : openingStyle==='Right Hand' ? 1 : 0;
+}
 // Schematic line-drawing, with real W/H (and a verified O/S/T sub-dimension
 // where the split geometry is known from calc-engine.js) imprinted directly
 // on it, shop-drawing style. `dims` is optional — omit it (e.g. the item
@@ -626,7 +643,7 @@ function dimRight(y1,y2,edgeX,label){
 // not just labeled with the numbers.
 function diagramSVG(category, dims){
   dims = dims || {};
-  const {W,H,O,S,T,unit} = dims;
+  const {W,H,O,S,T,unit,openingStyle} = dims;
   const hasWH = W>0 && H>0;
   const MAXW=90, MAXH=70, MIN=22;
   let RW=MAXW, RH=MAXH;
@@ -647,8 +664,13 @@ function diagramSVG(category, dims){
     const side = category==='hmst82_xox' ? O : S;
     if(side>0){
       const leftX = RX + (side/W)*RW, rightX = RX2 - (side/W)*RW;
+      const cy = (RY+RY2)/2, s = Math.min(6, RW*0.06);
+      // Both outer sashes always slide inward toward the fixed centre pane
+      // — this is fixed by the XOX design itself, not the item's Opening
+      // Style, so the direction is always known here.
       shape += `<line x1="${leftX}" y1="${RY}" x2="${leftX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
-        <line x1="${rightX}" y1="${RY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
+        <line x1="${rightX}" y1="${RY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
+        ${chevron((RX+leftX)/2, cy, 1, s)}${chevron((rightX+RX2)/2, cy, -1, s)}`;
       subDim = dimBottom(RX, leftX, RY2, fmtDimVal(side,unit));
     }
   } else if((category==='hmst82_lower_hung' || category==='hmst82_upper_hung') && hasWH && O>0){
@@ -670,6 +692,13 @@ function diagramSVG(category, dims){
         <line x1="${rightX}" y1="${splitY}" x2="${rightX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
       subDim += dimBottom(RX, leftX, RY2, fmtDimVal(S,unit));
     }
+  } else if(category==='hmst82_xo_ox'){
+    // The one true slider in this group — hmst82_xx/p4000_ox are casements
+    // (hinged, not sliding), so they get the plain divider below with no
+    // arrow.
+    const midX=(RX+RX2)/2, cy=(RY+RY2)/2, s=Math.min(7,RW*0.08), dir=openingDir(openingStyle);
+    shape += `<line x1="${midX}" y1="${RY}" x2="${midX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
+      ${dir!==0 ? chevron(midX,cy,dir,s) : chevronBoth(midX,cy,s)}`;
   } else if(HALF_SPLIT_CATEGORIES.includes(category)){
     shape += `<line x1="${(RX+RX2)/2}" y1="${RY}" x2="${(RX+RX2)/2}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>`;
   } else if((CATEGORY_CONFIG[category]||{}).kind === 'door'){
@@ -678,8 +707,9 @@ function diagramSVG(category, dims){
     // so it reads as a floor-to-ceiling door, not a window. Real panel
     // count/split isn't tracked per product, so this is a representative
     // schematic rather than a formula-verified one.
-    const midX = (RX+RX2)/2, cy = (RY+RY2)/2, handleX = midX - RW*0.09;
+    const midX = (RX+RX2)/2, cy = (RY+RY2)/2, handleX = midX - RW*0.09, doorDir = openingDir(openingStyle);
     shape += `<line x1="${midX}" y1="${RY}" x2="${midX}" y2="${RY2}" stroke="#96a1ad" stroke-width="1.2"/>
+      ${doorDir!==0 ? chevron(midX,cy,doorDir,Math.min(6,RW*0.07)) : chevronBoth(midX,cy,Math.min(6,RW*0.07))}
       <line x1="${handleX}" y1="${cy-RH*0.08}" x2="${handleX}" y2="${cy+RH*0.08}" stroke="#5b6673" stroke-width="2.5" stroke-linecap="round"/>
       <line x1="${RX}" y1="${RY2}" x2="${RX2}" y2="${RY2}" stroke="#1f5fa8" stroke-width="4.5"/>`;
   }
@@ -691,7 +721,7 @@ function diagramSVG(category, dims){
 function productVisualHtml(category, dims){
   return diagramSVG(category, dims);
 }
-function itemDims(it){ return it && {W:it.width, H:it.height, O:it.dimO, S:it.dimS, T:it.dimT, unit:it.unit}; }
+function itemDims(it){ return it && {W:it.width, H:it.height, O:it.dimO, S:it.dimS, T:it.dimT, unit:it.unit, openingStyle:it.openingStyle}; }
 
 function renderItemCard(o, it){
   const cfg = CATEGORY_CONFIG[it.category] || {};
@@ -929,7 +959,7 @@ async function deleteItem(orderId, itemNo){
 async function runCalculation(orderId, itemNo){
   try{
     const it = findItem(itemNo);
-    const dims = { W: it.width, H: it.height, O: it.dimO, S: it.dimS, T: it.dimT };
+    const dims = { W: it.width, H: it.height, O: it.dimO, S: it.dimS, T: it.dimT, unit: it.unit };
     const res = C.calcComponents(it.category, dims, it.quantity, state.formulas);
     await D.runCalculation(orderId, it, res);
     route('order-detail', orderId);

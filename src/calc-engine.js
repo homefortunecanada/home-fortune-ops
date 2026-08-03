@@ -253,10 +253,24 @@ const CALCULATORS = {
   p4000_stacked_ox: { fn: calcP4000StackedOx, required: ['W','H','T'], scalesWithQty: true, area: true },
 };
 
+// The 4000-series cut-list formulas below (calcP4000*) are verified against
+// millimetre worked examples from the source workbook and assume mm input
+// unconditionally — they are NOT unit-aware themselves. Historically every
+// 4000 product was mm-native; p4000_stacked_ox (and, for consistency, the
+// rest of the 4000 line) moved to inches on 2026-08-03 after inch
+// measurements kept getting typed into the mm-labeled field. Rather than
+// touch six verified formulas, calcComponents converts inches to mm once,
+// generically, right here — see the inch branch below.
+const P4000_CATEGORIES = ['p4000_x','p4000_xx','p4000_ox','p4000_xox','p4000_fixed_over_xox','p4000_stacked_ox'];
+
 /* ================= calculation engine entry point ================= */
-// dims: {W,H,O,S,T} — raw values as entered, in the category's native unit
-// (inches for hmst82_*, millimetres for p4000_*). Returns
-// {ok, warnings:[], components:[{code,label,labelZh,length,qtyEach,totalQty}],
+// dims: {W,H,O,S,T,unit} — raw values as entered. `unit` should be the
+// ITEM'S OWN stored unit (not just the category's current default) so a
+// category's default can change later without silently reinterpreting
+// older items that were correctly entered under the old unit — falls back
+// to the category's current default only when dims.unit isn't given (e.g.
+// the Formula Admin test tool, which has no real item to reference).
+// Returns {ok, warnings:[], components:[{code,label,labelZh,length,qtyEach,totalQty}],
 //  glass:[{label,labelZh,widthIn,heightIn,widthDisplay,heightDisplay,qtyEach,totalQty}]|null,
 //  areaM2:number|null, scalesWithQty, error}
 export function calcComponents(category, dims, qty, formulas){
@@ -272,16 +286,20 @@ export function calcComponents(category, dims, qty, formulas){
     return {ok:false, error:t('calc.error.badnum')};
   }
   const W = Number(dims.W), H = Number(dims.H);
-  const unit = (CATEGORY_CONFIG[category]||{unit:'mm'}).unit;
+  const unit = dims.unit || (CATEGORY_CONFIG[category]||{unit:'mm'}).unit;
   const warnings = [];
   if(f.minW!=null && f.maxW!=null && (W < f.minW || W > f.maxW)) warnings.push(tf('calc.warn.widthRange',{w:W,min:f.minW,max:f.maxW,unit}));
   if(f.minH!=null && f.maxH!=null && (H < f.minH || H > f.maxH)) warnings.push(tf('calc.warn.heightRange',{h:H,min:f.minH,max:f.maxH,unit}));
 
-  const result = calc.fn(dims, qty);
+  const calcDims = (unit==='in' && P4000_CATEGORIES.includes(category))
+    ? Object.fromEntries(Object.entries(dims).map(([k,v]) => ['W','H','O','S','T'].includes(k) && v!=null ? [k, Number(v)*IN_TO_MM] : [k,v]))
+    : dims;
+  const result = calc.fn(calcDims, qty);
   const components = applyQty(result.components, qty, calc.scalesWithQty)
     .map(c => ({...c, totalQty: Math.round(c.totalQty)}));
   const glass = result.glass ? applyQty(result.glass, qty, calc.scalesWithQty).map(g => ({...g, totalQty: Math.round(g.totalQty)})) : null;
-  const areaM2 = calc.area ? round2((W*H*qty)/1000000) : null;
+  const Wmm = unit==='in' ? W*IN_TO_MM : W, Hmm = unit==='in' ? H*IN_TO_MM : H;
+  const areaM2 = calc.area ? round2((Wmm*Hmm*qty)/1000000) : null;
 
   if(components.some(c => c.length <= 0) || (glass||[]).some(g => g.widthIn<=0 || g.heightIn<=0)){
     return {ok:false, error: t('calc.error.negativeResult')};

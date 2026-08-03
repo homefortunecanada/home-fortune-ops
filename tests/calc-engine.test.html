@@ -78,28 +78,39 @@ run('HMST82 upper-hung', 'hmst82_upper_hung', {W:22.75,H:58.5,O:18.5}, 2,
   check('upper-hung totalQty NOT scaled (frame width)', r.components[0].totalQty, 2);
 }
 
-// Source: 4000平开窗（X）. W=247mm H=1473mm Q=1.
-run('4000 X', 'p4000_x', {W:247,H:1473}, 1, [195,1421,149,1375,40,1266]);
+// Source: 4000平开窗（X）. W=247mm H=1473mm Q=1. 4000-series now takes
+// inches (see i18n.js CATEGORY_CONFIG comment, 2026-08-03) — dims below are
+// the exact inch equivalent of the workbook's mm values (247/25.4,
+// 1473/25.4), unit:'in' so calcComponents converts back to mm before
+// running the verified formula. Expected outputs are unchanged — same
+// physical window, same verified mm cut sizes.
+run('4000 X', 'p4000_x', {W:9.724409,H:57.992126,unit:'in'}, 1, [195,1421,149,1375,40,1266]);
 {
-  const r = calcComponents('p4000_x', {W:247,H:1473}, 1, formulas);
+  const r = calcComponents('p4000_x', {W:9.724409,H:57.992126,unit:'in'}, 1, formulas);
   check('4000 X area', r.areaM2, 0.363831);
 }
 
 // Source: 4000平开窗（XX）. W=1175mm H=724mm Q=1.
-run('4000 XX', 'p4000_xx', {W:1175,H:724}, 1, [1123,672,507.5,626,669,398.5,517]);
+run('4000 XX', 'p4000_xx', {W:46.259843,H:28.503937,unit:'in'}, 1, [1123,672,507.5,626,669,398.5,517]);
 
 // Source: 4000平开窗（OX). W=857mm H=1158mm Q=1.
-run('4000 OX', 'p4000_ox', {W:857,H:1158}, 1, [805,1106,348.5,1060,1103,239.5,951,379,1091]);
+run('4000 OX', 'p4000_ox', {W:33.740157,H:45.590551,unit:'in'}, 1, [805,1106,348.5,1060,1103,239.5,951,379,1091]);
 
 // Source: 4000平开窗（XOX). W=2080mm S=508mm H=860mm Q=1.
-run('4000 XOX', 'p4000_xox', {W:2080,S:508,H:860}, 1, [2028,808,428,762,805,319,653,1032.3,653]);
+run('4000 XOX', 'p4000_xox', {W:81.889764,S:20,H:33.858268,unit:'in'}, 1, [2028,808,428,762,805,319,653,1032.3,653]);
 
 // Source: 4000平开窗（0 XOX）. W=2133mm S=559mm H=1524mm T=914mm Q=1.
-run('4000 fixed-over-XOX', 'p4000_fixed_over_xox', {W:2133,S:559,H:1524,T:914}, 1,
+run('4000 fixed-over-XOX', 'p4000_fixed_over_xox', {W:83.976378,S:22.007874,H:60,T:35.984252,unit:'in'}, 1,
   [2081,1472,479,530,2078,1469,370,421,983.3,421,2066,864.65]);
 
 // Source: 4000平开窗（O X). W=609mm H=1654mm T=1117mm Q=1.
-run('4000 stacked O/X', 'p4000_stacked_ox', {W:609,H:1654,T:1117}, 1, [557,1602,511,1099.5,554]);
+run('4000 stacked O/X', 'p4000_stacked_ox', {W:23.976378,H:65.118110,T:43.976378,unit:'in'}, 1, [557,1602,511,1099.5,554]);
+
+// A pre-2026-08-03 item stored with unit:'mm' must keep calculating
+// correctly forever, even though the category's current default is now
+// inches — the item's own stored unit is authoritative, not the category
+// default (see calcComponents comment).
+run('4000 stacked O/X (legacy mm item)', 'p4000_stacked_ox', {W:609,H:1654,T:1117,unit:'mm'}, 1, [557,1602,511,1099.5,554]);
 
 print(`\n\nTOTAL: ${pass} passed, ${fail} failed`);
 out.textContent = log;

@@ -66,12 +66,20 @@ windows outside these two systems:
 | HMST82 XOX Slider | HMST82 | inches | O (manual) |
 | HMST82 Lower-Sash Hung | HMST82 | inches | O |
 | HMST82 Upper-Sash Hung | HMST82 | inches | O — ⚠ quantities do not scale with order quantity (matches the source workbook exactly; verify manually if quantity > 1) |
-| 4000 Single Casement (X) | 4000 | mm | — |
-| 4000 Double Casement (XX) | 4000 | mm | — |
-| 4000 Fixed + Casement (OX) | 4000 | mm | — |
-| 4000 XOX | 4000 | mm | S |
-| 4000 Fixed-over-XOX | 4000 | mm | S, T |
-| 4000 Stacked O/X | 4000 | mm | T |
+| 4000 Single Casement (X) | 4000 | inches | — |
+| 4000 Double Casement (XX) | 4000 | inches | — |
+| 4000 Fixed + Casement (OX) | 4000 | inches | — |
+| 4000 XOX | 4000 | inches | S |
+| 4000 Fixed-over-XOX | 4000 | inches | S, T |
+| 4000 Stacked O/X | 4000 | inches | T |
+
+**The whole 4000-series moved from mm to inches on 2026-08-03** (see
+`CATEGORY_CONFIG` comment in `src/i18n.js`), matching how staff actually
+measure on site and consistent with HMST82. The verified cut-list formulas
+themselves are untouched — `calc-engine.js` converts inches to mm
+internally, per item, using that item's own stored unit — so windows
+entered before this change (stored with `unit:'mm'`) keep calculating
+correctly forever, without needing to be re-entered.
 
 Known, confirmed-real gaps (verified against the source workbooks — not a
 transcription issue, genuinely absent from Home Fortune's own data): steel-

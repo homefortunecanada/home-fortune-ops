@@ -445,13 +445,21 @@ export const CATEGORY_CONFIG = {
   hmst82_xox:            { unit:'in', dims:['O'] },
   hmst82_lower_hung:     { unit:'in', dims:['O'] },
   hmst82_upper_hung:     { unit:'in', dims:['O'], scalesWithQty:false },
-  p4000_x:               { unit:'mm', dims:[] },
-  p4000_xx:              { unit:'mm', dims:[] },
-  p4000_ox:              { unit:'mm', dims:[] },
-  p4000_xox:             { unit:'mm', dims:['S'] },
-  p4000_fixed_over_xox:  { unit:'mm', dims:['S','T'] },
-  p4000_stacked_ox:      { unit:'mm', dims:['T'] },
-  custom_shape:          { unit:'mm', dims:[] },
+  // The whole 4000-series moved from mm to inches on 2026-08-03 for
+  // consistency with HMST82 and to match how staff actually measure on
+  // site — p4000_stacked_ox specifically was traced to repeated pricing
+  // errors from inch measurements being typed into the mm-labeled field.
+  // calc-engine.js converts to mm internally before running each verified
+  // cut-list formula, so the formulas themselves are untouched — and it
+  // does so per-item (using the item's own stored unit), so older items
+  // entered in mm before this change keep calculating correctly.
+  p4000_x:               { unit:'in', dims:[] },
+  p4000_xx:              { unit:'in', dims:[] },
+  p4000_ox:              { unit:'in', dims:[] },
+  p4000_xox:             { unit:'in', dims:['S'] },
+  p4000_fixed_over_xox:  { unit:'in', dims:['S','T'] },
+  p4000_stacked_ox:      { unit:'in', dims:['T'] },
+  custom_shape:          { unit:'in', dims:[] },
   door_6ft_lowe_i89:     { unit:'in', dims:[], kind:'door', doorId:'DOR-6-LOWE-I89' },
   door_6ft_lowe_clr:     { unit:'in', dims:[], kind:'door', doorId:'DOR-6-LOWE-CLR' },
   door_6ft_std:          { unit:'in', dims:[], kind:'door', doorId:'DOR-6-STD' },
